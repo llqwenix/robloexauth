@@ -6,176 +6,177 @@
 const SPREADSHEET_ID = '1kb2B-XQ9SdjMXM_G0ORi3NEdfCg-aFoI-pVwVa2IXSI'; // СКОПИРУЙТЕ СЮДА ВАШ ID
 const API_KEY = 'AIzaSyB1BBzMEXEQ-tU30RfgPB16biw08GkjXVkY'; // Создайте API ключ в Google Cloud Console (для публичного доступа)
 
-// Имя листа с пользователями
-const SHEET_NAME = 'users'; // Или 'Users', как вы назвали лист
+// auth.js - общая логика для всех страниц
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
-function showToast(message, isError = false) {
+// Настройки
+const STORAGE_KEY = 'robloex_users';
+const CURRENT_USER_KEY = 'robloex_current_user';
+const SKINS_STORAGE_KEY = 'robloex_skins';
+
+// Вспомогательные функции
+function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     if (toast) {
         toast.textContent = message;
-        toast.className = `toast ${isError ? 'error' : 'success'}`;
+        toast.className = `toast ${type}`;
         toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 3000);
     } else {
         alert(message);
     }
 }
 
-function getHash(str) {
+function hashPassword(password) {
     let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        const char = str.charCodeAt(i);
+    for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
         hash |= 0;
     }
-    return btoa(hash.toString() + str).slice(0, 64);
+    return btoa(hash.toString() + password).slice(0, 64);
 }
 
 function generateCookie() {
     return [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 }
 
-// --- РАБОТА С GOOGLE SHEETS (через публичный API) ---
-async function fetchSheetData(range) {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!${range}?key=${API_KEY}`;
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Ошибка загрузки данных');
-        const data = await response.json();
-        return data.values || [];
-    } catch (error) {
-        console.error('Ошибка при запросе к Google Sheets:', error);
-        showToast('Ошибка подключения к серверу', true);
-        return null;
-    }
+// Работа с пользователями
+function getUsers() {
+    const users = localStorage.getItem(STORAGE_KEY);
+    return users ? JSON.parse(users) : [];
 }
 
-async function appendToSheet(values) {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${SHEET_NAME}!A:E:append?valueInputOption=USER_ENTERED`;
-    const body = { values: [values] };
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        if (!response.ok) throw new Error('Ошибка добавления данных');
-        return true;
-    } catch (error) {
-        console.error('Ошибка при записи в Google Sheets:', error);
-        return false;
-    }
+function saveUsers(users) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
 }
 
-// --- ФУНКЦИИ АВТОРИЗАЦИИ ---
-async function registerUser(username, password) {
-    const usersData = await fetchSheetData('A:C');
-    if (!usersData) return { success: false, message: 'Ошибка сервера' };
+function registerUser(username, password) {
+    const users = getUsers();
     
-    const exists = usersData.slice(1).some(row => row[0] === username);
-    if (exists) return { success: false, message: 'Пользователь уже существует!' };
+    if (users.find(u => u.username === username)) {
+        return { success: false, message: 'Пользователь уже существует!' };
+    }
     
     const cookie = generateCookie();
-    const passwordHash = getHash(password);
-    const now = new Date().toISOString();
-    
-    const success = await appendToSheet([username, passwordHash, cookie, 'user', now]);
-    if (success) {
-        return { success: true, cookie: cookie };
-    } else {
-        return { success: false, message: 'Ошибка сохранения данных' };
-    }
-}
-
-async function loginUser(username, password) {
-    const usersData = await fetchSheetData('A:E');
-    if (!usersData) return { success: false, message: 'Ошибка сервера' };
-    
-    const passwordHash = getHash(password);
-    const userRow = usersData.slice(1).find(row => row[0] === username && row[1] === passwordHash);
-    
-    if (userRow) {
-        return { success: true, username: userRow[0], role: userRow[3], cookie: userRow[2] };
-    } else {
-        return { success: false, message: 'Неверное имя пользователя или пароль!' };
-    }
-}
-
-async function getUserData(cookie) {
-    const usersData = await fetchSheetData('A:E');
-    if (!usersData) return null;
-    const userRow = usersData.slice(1).find(row => row[2] === cookie);
-    if (userRow) {
-        return { username: userRow[0], role: userRow[3], cookie: userRow[2] };
-    }
-    return null;
-}
-
-// --- ФУНКЦИИ ДЛЯ СКИНОВ ---
-function saveSkinToLocalStorage(username, skinDataUrl) {
-    localStorage.setItem(`skin_${username}`, skinDataUrl);
-}
-
-function getSkinFromLocalStorage(username) {
-    return localStorage.getItem(`skin_${username}`);
-}
-
-function applySkinPreview(file) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const previewImg = document.getElementById('skinPreview');
-        if (previewImg) {
-            previewImg.src = e.target.result;
-            previewImg.style.display = 'block';
-        }
-        // Сохраняем в localStorage
-        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-        if (currentUser && currentUser.username) {
-            saveSkinToLocalStorage(currentUser.username, e.target.result);
-            showToast('Скин загружен! Он появится в лаунчере после перезапуска.');
-        }
+    const newUser = {
+        username: username,
+        password: hashPassword(password),
+        cookie: cookie,
+        role: 'user',
+        created: new Date().toISOString()
     };
-    reader.readAsDataURL(file);
+    
+    users.push(newUser);
+    saveUsers(users);
+    
+    return { success: true, cookie: cookie, message: 'Регистрация успешна!' };
 }
 
-// --- УПРАВЛЕНИЕ СЕССИЕЙ ---
-function saveSession(user) {
-    localStorage.setItem('currentUser', JSON.stringify(user));
+function loginUser(username, password) {
+    const users = getUsers();
+    const passwordHash = hashPassword(password);
+    const user = users.find(u => u.username === username && u.password === passwordHash);
+    
+    if (user) {
+        return { success: true, username: user.username, role: user.role, cookie: user.cookie };
+    }
+    return { success: false, message: 'Неверное имя пользователя или пароль!' };
 }
 
-function clearSession() {
-    localStorage.removeItem('currentUser');
+function loginByCookie(cookie) {
+    const users = getUsers();
+    const user = users.find(u => u.cookie === cookie);
+    
+    if (user) {
+        return { success: true, username: user.username, role: user.role, cookie: user.cookie };
+    }
+    return { success: false };
 }
 
 function getCurrentUser() {
-    const userJson = localStorage.getItem('currentUser');
-    if (userJson) {
-        try {
-            return JSON.parse(userJson);
-        } catch(e) { return null; }
-    }
-    return null;
+    const user = localStorage.getItem(CURRENT_USER_KEY);
+    return user ? JSON.parse(user) : null;
 }
 
-async function checkAuth() {
+function saveCurrentUser(user) {
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+}
+
+function clearCurrentUser() {
+    localStorage.removeItem(CURRENT_USER_KEY);
+}
+
+function logout() {
+    clearCurrentUser();
+    window.location.href = '/robloexauth/login.html';
+}
+
+function checkAuth() {
     const user = getCurrentUser();
     if (user && user.cookie) {
-        const userData = await getUserData(user.cookie);
-        if (userData) {
-            return userData;
+        const verified = loginByCookie(user.cookie);
+        if (verified.success) {
+            return verified;
         } else {
-            clearSession();
+            clearCurrentUser();
             return null;
         }
     }
     return null;
 }
 
+// Работа со скинами
+function saveSkin(username, skinDataUrl) {
+    const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
+    skins[username] = skinDataUrl;
+    localStorage.setItem(SKINS_STORAGE_KEY, JSON.stringify(skins));
+}
+
+function getSkin(username) {
+    const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
+    return skins[username] || null;
+}
+
+function deleteSkin(username) {
+    const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
+    delete skins[username];
+    localStorage.setItem(SKINS_STORAGE_KEY, JSON.stringify(skins));
+}
+
+function uploadSkin(file, callback) {
+    if (!file) return;
+    
+    if (!file.type.match('image/png')) {
+        showToast('Пожалуйста, выберите PNG файл!', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            if ((img.width === 64 && img.height === 64) || (img.width === 64 && img.height === 32)) {
+                callback(e.target.result);
+            } else {
+                showToast('Неверный размер! Поддерживаются 64x64 или 64x32 пикселей.', 'error');
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// Перенаправления
 function redirectToLogin() {
     window.location.href = '/robloexauth/login.html';
 }
 
 function redirectToHome() {
     window.location.href = '/robloexauth/home.html';
+}
+
+function redirectToDashboard() {
+    window.location.href = '/robloexauth/dashboard.html';
 }
