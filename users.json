@@ -1,23 +1,34 @@
 {
   "users": [
     {
-      "username": "Notch",
-      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "username": "admin",
+      "cookie": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
       "role": "admin",
       "created": "2024-01-01",
+      "last_login": null,
       "hwid": "allowed"
     },
     {
-      "username": "Vynzxluf",
-      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "username": "player1",
+      "cookie": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
       "role": "user",
       "created": "2024-01-02",
+      "last_login": null,
       "hwid": "allowed"
+    },
+    {
+      "username": "vip_user",
+      "cookie": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
+      "role": "vip",
+      "created": "2024-01-03",
+      "last_login": null,
+      "hwid": "specific_hwid_hash"
     }
   ],
   "settings": {
     "allow_registration": false,
     "version": "2.0",
-    "maintenance": false
+    "maintenance": false,
+    "server_name": "Robloex Official"
   }
 }
