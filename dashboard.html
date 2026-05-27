@@ -1,61 +1,41 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robloex - Профиль</title>
-    <link rel="stylesheet" href="style.css">
+    <meta http-equiv="refresh" content="0; url=/robloexauth/home.html">
+    <title>Robloex Launcher</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0f0a 0%, #0a2e0a 50%, #0a0f0a 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        .loader {
+            text-align: center;
+            color: #00ff88;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 255, 136, 0.3);
+            border-top-color: #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <nav class="navbar">
-            <div class="logo">ROBLOEX</div>
-            <div class="nav-links">
-                <a href="home.html">ГЛАВНАЯ</a>
-                <a href="dashboard.html" class="active">ПРОФИЛЬ</a>
-            </div>
-            <div id="userInfo"></div>
-        </nav>
-        
-        <div class="glass-card">
-            <div class="card-header">👤 МОЙ ПРОФИЛЬ</div>
-            <div class="dashboard-grid">
-                <div class="info-card">
-                    <h4>ИНФОРМАЦИЯ</h4>
-                    <p><strong>Имя:</strong> <span id="profileUsername">-</span></p>
-                    <p><strong>Роль:</strong> <span id="profileRole">Пользователь</span></p>
-                    <p><strong>Дата регистрации:</strong> <span id="profileCreated">-</span></p>
-                </div>
-                <div class="info-card">
-                    <h4>🎨 СКИН ПЕРСОНАЖА</h4>
-                    <div class="skin-preview-container">
-                        <img id="skinPreview" class="skin-preview" alt="Превью скина">
-                        <button class="btn-secondary" onclick="document.getElementById('skinFile').click()">📁 ВЫБРАТЬ ФАЙЛ</button>
-                        <button class="btn-secondary btn-danger" onclick="removeSkin()" style="margin-top: 10px;">🗑 УДАЛИТЬ СКИН</button>
-                        <input type="file" id="skinFile" accept="image/png" style="display: none;" onchange="handleSkinUpload(this.files[0])">
-                        <p class="skin-hint">Поддерживаются PNG, размер 64x64 или 64x32 пикселей</p>
-                    </div>
-                </div>
-                <div class="info-card">
-                    <h4>🔑 КЛЮЧ ДОСТУПА (COOKIE)</h4>
-                    <div class="cookie-box">
-                        <input type="text" id="userCookie" readonly>
-                        <button class="copy-btn" onclick="copyCookie()">📋 КОПИРОВАТЬ</button>
-                    </div>
-                    <small>Используйте этот ключ для входа в лаунчер</small>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+    <div class="loader">
+        <div class="spinner"></div>
+        <p>Перенаправление...</p>
+        <p><a href="home.html" style="color: #00ff88;">Нажмите здесь</a>, если не происходит автоматического перенаправления</p>
     </div>
-    
-    <div id="toast" class="toast"></div>
-    
-    <script src="auth.js"></script>
-    <script>
-        let currentUserData = null;
-        
-        function loadDashboard() {
-            const user = checkAuth();
-            if (!user) {
+</body>
+</html>
