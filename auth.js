@@ -8,6 +8,9 @@ const NEWS_KEY = 'robloex_news';
 const CURRENT_USER_KEY = 'robloex_current_user';
 const SKINS_STORAGE_KEY = 'robloex_skins';
 
+// ========== НАСТРОЙКИ АДМИНА ==========
+const ADMIN_USERNAME = 'vynzxluf'; // Только этот пользователь имеет доступ к админ-панели
+
 // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
@@ -72,7 +75,6 @@ function saveRequests(requests) {
 function createRequest(username, password) {
     const requests = getRequests();
     
-    // Проверяем, нет ли уже заявки от этого пользователя
     if (requests.some(r => r.username === username)) {
         return { success: false, message: 'Заявка от этого пользователя уже существует!' };
     }
@@ -81,7 +83,7 @@ function createRequest(username, password) {
         id: Date.now(),
         username: username,
         password: hashPassword(password),
-        status: 'pending', // pending, approved, denied
+        status: 'pending',
         createdAt: new Date().toISOString(),
         reviewedBy: null,
         reviewedAt: null
@@ -101,7 +103,6 @@ function approveRequest(requestId, adminName) {
     const request = requests[requestIndex];
     if (request.status !== 'pending') return false;
     
-    // Создаём пользователя
     const users = getUsers();
     const cookie = generateCookie();
     
@@ -118,7 +119,6 @@ function approveRequest(requestId, adminName) {
     users.push(newUser);
     saveUsers(users);
     
-    // Обновляем статус заявки
     request.status = 'approved';
     request.reviewedBy = adminName;
     request.reviewedAt = new Date().toISOString();
@@ -165,8 +165,6 @@ function isUserBanned(username) {
 
 function banUser(username, reason, durationHours, adminName) {
     const bans = getBans();
-    
-    // Удаляем старые активные баны
     const filteredBans = bans.filter(b => b.username !== username);
     
     const until = durationHours ? new Date(Date.now() + durationHours * 3600000).toISOString() : null;
@@ -181,7 +179,6 @@ function banUser(username, reason, durationHours, adminName) {
     
     saveBans(filteredBans);
     
-    // Если пользователь сейчас залогинен, разлогиниваем его
     const currentUser = getCurrentUser();
     if (currentUser && currentUser.username === username) {
         clearCurrentUser();
@@ -201,7 +198,6 @@ function unbanUser(username) {
 function getNews() {
     const news = localStorage.getItem(NEWS_KEY);
     if (!news) {
-        // Новости по умолчанию
         const defaultNews = [
             {
                 id: 1,
@@ -267,7 +263,6 @@ function updateNewsPinned(newsId, isPinned) {
 
 // ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ (продолжение) ==========
 function registerUser(username, password) {
-    // Валидация
     if (!username || username.length < 3) {
         return { success: false, message: 'Имя пользователя должно быть не менее 3 символов!' };
     }
@@ -281,7 +276,6 @@ function registerUser(username, password) {
         return { success: false, message: 'Имя пользователя может содержать только латиницу, цифры и подчёркивание!' };
     }
     
-    // Проверка на бан
     const ban = isUserBanned(username);
     if (ban) {
         const untilText = ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда';
@@ -313,7 +307,6 @@ function registerUser(username, password) {
 }
 
 function loginUser(username, password) {
-    // Проверка на бан
     const ban = isUserBanned(username);
     if (ban) {
         const untilText = ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда';
@@ -335,7 +328,6 @@ function loginByCookie(cookie) {
     const user = users.find(u => u.cookie === cookie);
     
     if (user) {
-        // Проверка на бан
         const ban = isUserBanned(user.username);
         if (ban) {
             return { success: false, message: `Аккаунт забанен` };
@@ -382,10 +374,11 @@ function checkAuth() {
     return null;
 }
 
-// ========== АДМИН-ФУНКЦИИ ==========
+// ========== АДМИН-ФУНКЦИИ (только для vynzxluf) ==========
 function isAdmin() {
     const user = getCurrentUser();
-    return user && user.role === 'admin';
+    // Только пользователь с именем vynzxluf имеет права администратора
+    return user && user.username === ADMIN_USERNAME;
 }
 
 function getAllUsers() {
@@ -396,17 +389,14 @@ function deleteUser(username) {
     let users = getUsers();
     users = users.filter(u => u.username !== username);
     saveUsers(users);
-    
-    // Также удаляем скин
     deleteSkin(username);
-    
     return true;
 }
 
 function changeUserRole(username, newRole) {
     const users = getUsers();
     const user = users.find(u => u.username === username);
-    if (user) {
+    if (user && username !== ADMIN_USERNAME) {
         user.role = newRole;
         saveUsers(users);
         return true;
