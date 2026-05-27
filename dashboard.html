@@ -154,25 +154,18 @@
     <script>
         let currentUserData = null;
         
-        async function loadDashboard() {
-            console.log('Загрузка dashboard.html, проверка авторизации...');
-            
-            // Проверяем авторизацию
+        function loadDashboard() {
             const user = checkAuth();
-            console.log('Пользователь:', user);
             
             if (!user) {
-                console.log('Пользователь не авторизован, перенаправление на login.html');
                 redirectToLogin();
                 return;
             }
             
             currentUserData = user;
             
-            // Обновляем навбар
             const userInfo = document.getElementById('userInfo');
             const isAdminUser = ADMIN_USERNAMES.includes(user.username);
-            console.log('Является ли пользователь администратором?', isAdminUser);
             
             userInfo.innerHTML = `
                 <div class="user-info">
@@ -182,13 +175,11 @@
                 </div>
             `;
             
-            // Показываем ссылку на админ-панель только для администраторов
             const navLinks = document.getElementById('navLinks');
             const existingAdminLink = document.querySelector('.admin-link');
             
             if (isAdminUser) {
                 if (!existingAdminLink) {
-                    console.log('Добавляем ссылку на админ-панель');
                     const adminLink = document.createElement('a');
                     adminLink.href = 'admin.html';
                     adminLink.textContent = 'АДМИН-ПАНЕЛЬ';
@@ -197,16 +188,13 @@
                 }
             } else {
                 if (existingAdminLink) {
-                    console.log('Удаляем ссылку на админ-панель');
                     existingAdminLink.remove();
                 }
             }
             
-            // Заполняем информацию
             document.getElementById('profileUsername').textContent = user.username;
             document.getElementById('profileRole').textContent = user.role === 'admin' ? 'Администратор' : 'Пользователь';
             
-            // Получаем дату регистрации из users
             const users = getUsers();
             const userData = users.find(u => u.username === user.username);
             if (userData && userData.created) {
@@ -217,7 +205,6 @@
             
             document.getElementById('userCookie').value = user.cookie || 'Нет cookie';
             
-            // Загружаем скин
             const savedSkin = getSkin(user.username);
             const preview = document.getElementById('skinPreview');
             if (savedSkin) {
@@ -272,8 +259,7 @@
             showToast('Cookie скопирован!', 'success');
         }
         
-        // Запускаем загрузку страницы
         loadDashboard();
-        <script src="auth.js"></script>
+    </script>
 </body>
 </html>
