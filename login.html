@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robloex Launcher - Вход</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="glass-card login-card">
+            <div class="card-header">🔐 ВХОД В АККАУНТ</div>
+            <div class="form-group">
+                <label>ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
+                <input type="text" id="loginUsername" placeholder="Введите имя пользователя">
+            </div>
+            <div class="form-group">
+                <label>ПАРОЛЬ</label>
+                <input type="password" id="loginPassword" placeholder="Введите пароль">
+            </div>
+            <button class="btn-primary" onclick="login()">ВОЙТИ</button>
+            <div class="auth-footer">
+                Нет аккаунта? <a href="/robloexauth/signup.html">ЗАРЕГИСТРИРОВАТЬСЯ</a>
+            </div>
+        </div>
+        <div id="toast" class="toast"></div>
+        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+    </div>
+    <script src="auth.js"></script>
+    <script>
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                showToast('Заполните все поля!', true);
+                return;
+            }
+            
+            const result = await loginUser(username, password);
+            if (result.success) {
+                saveSession({ username: result.username, role: result.role, cookie: result.cookie });
+                showToast('Вход выполнен! Перенаправление...');
+                setTimeout(() => {
+                    window.location.href = '/robloexauth/home.html';
+                }, 1000);
+            } else {
+                showToast(result.message, true);
+            }
+        }
+        
+        // Если пользователь уже залогинен, отправляем на главную
+        checkAuth().then(user => {
+            if (user) window.location.href = '/robloexauth/home.html';
+        });
+    </script>
+</body>
+</html>
