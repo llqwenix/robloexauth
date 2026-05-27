@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robloex Launcher - Главная</title>
+    <title>Robloex - Главная</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,22 +11,16 @@
         <nav class="navbar">
             <div class="logo">ROBLOEX</div>
             <div class="nav-links">
-                <a href="/robloexauth/home.html" class="active">ГЛАВНАЯ</a>
-                <a href="/robloexauth/dashboard.html" id="dashboardLink">ПРОФИЛЬ</a>
+                <a href="home.html" class="active">ГЛАВНАЯ</a>
+                <a href="dashboard.html">ПРОФИЛЬ</a>
             </div>
-            <div id="userInfo">
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">U</div>
-                    <span id="userName">User</span>
-                    <button class="logout-btn" onclick="logout()">ВЫХОД</button>
-                </div>
-            </div>
+            <div id="userInfo"></div>
         </nav>
-
+        
         <div class="glass-card">
             <div class="card-header">🎮 ДОБРО ПОЖАЛОВАТЬ В ROBLOEX LAUNCHER</div>
             <p class="description">
-                Современный лаунчер для Minecraft с поддержмой модов, скинов и многого другого.
+                Современный лаунчер для Minecraft с поддержкой модов, скинов и многого другого.
             </p>
             <div class="info-grid">
                 <div class="info-card">
@@ -46,28 +40,28 @@
             </div>
         </div>
         
-        <div id="toast" class="toast"></div>
         <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
     </div>
+    
+    <div id="toast" class="toast"></div>
+    
     <script src="auth.js"></script>
     <script>
-        async function loadHomePage() {
-            const user = await checkAuth();
+        function loadHomePage() {
+            const user = checkAuth();
             if (!user) {
                 redirectToLogin();
                 return;
             }
-            document.getElementById('userName').textContent = user.username;
-            document.getElementById('userAvatar').textContent = user.username[0].toUpperCase();
-            const dashboardLink = document.getElementById('dashboardLink');
-            if (dashboardLink) {
-                dashboardLink.href = '/robloexauth/dashboard.html';
-            }
-        }
-        
-        function logout() {
-            clearSession();
-            redirectToLogin();
+            
+            const userInfo = document.getElementById('userInfo');
+            userInfo.innerHTML = `
+                <div class="user-info">
+                    <div class="user-avatar">${user.username[0].toUpperCase()}</div>
+                    <span>${user.username}</span>
+                    <button class="logout-btn" onclick="logout()">ВЫХОД</button>
+                </div>
+            `;
         }
         
         loadHomePage();
