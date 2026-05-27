@@ -2,79 +2,180 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robloex Launcher - Регистрация</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Robloex - Регистрация</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            background:linear-gradient(135deg,#0a0f0a 0%,#0a2e0a 50%,#0a0f0a 100%);
+            font-family:Arial,sans-serif;
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            padding:20px
+        }
+        .card{
+            background:rgba(10,30,10,0.95);
+            border-radius:20px;
+            padding:40px;
+            width:100%;
+            max-width:450px;
+            border:1px solid #00ff88;
+            box-shadow:0 0 30px rgba(0,255,136,0.2)
+        }
+        h1{color:#00ff88;text-align:center;margin-bottom:30px}
+        input{
+            width:100%;
+            padding:12px;
+            margin:10px 0;
+            background:#0a1a0a;
+            border:1px solid #00aa44;
+            border-radius:10px;
+            color:#00ff88;
+            font-size:14px
+        }
+        input:focus{outline:none;border-color:#00ff88}
+        button{
+            width:100%;
+            padding:12px;
+            background:#0a4d0a;
+            border:none;
+            border-radius:10px;
+            color:white;
+            font-size:16px;
+            font-weight:bold;
+            cursor:pointer;
+            margin-top:20px
+        }
+        button:hover{background:#00aa44}
+        .cookie-box{
+            background:#0a1a0a;
+            border-radius:10px;
+            padding:15px;
+            margin-top:20px;
+            display:none;
+            border:1px solid #00aa44
+        }
+        .cookie-box input{font-family:monospace;font-size:11px;margin:5px 0}
+        .copy-btn{background:#008844;margin-top:5px}
+        .message{
+            padding:10px;
+            border-radius:8px;
+            text-align:center;
+            margin-top:15px;
+            display:none
+        }
+        .success{background:rgba(0,255,136,0.2);border:1px solid #00ff88;color:#00ff88;display:block}
+        .error{background:rgba(255,68,68,0.2);border:1px solid #ff4444;color:#ff8888;display:block}
+        .footer{text-align:center;margin-top:20px;color:#008844;font-size:12px}
+        a{color:#00ff88;text-decoration:none}
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="glass-card login-card">
-            <div class="card-header">📝 РЕГИСТРАЦИЯ</div>
-            <div class="form-group">
-                <label>ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
-                <input type="text" id="signupUsername" placeholder="Введите имя пользователя">
-                <small>3-20 символов, латиница, цифры, подчёркивание</small>
-            </div>
-            <div class="form-group">
-                <label>ПАРОЛЬ</label>
-                <input type="password" id="signupPassword" placeholder="Введите пароль">
-                <small>Не менее 4 символов</small>
-            </div>
-            <div class="form-group">
-                <label>ПОДТВЕРЖДЕНИЕ ПАРОЛЯ</label>
-                <input type="password" id="signupConfirmPassword" placeholder="Повторите пароль">
-            </div>
-            <button class="btn-primary" onclick="register()">СОЗДАТЬ АККАУНТ</button>
-            <div class="auth-footer">
-                Уже есть аккаунт? <a href="/robloexauth/login.html">ВОЙТИ</a>
-            </div>
+    <div class="card">
+        <h1>📝 РЕГИСТРАЦИЯ</h1>
+        <div id="registerForm">
+            <input type="text" id="username" placeholder="Имя пользователя">
+            <input type="password" id="password" placeholder="Пароль">
+            <input type="password" id="confirm" placeholder="Подтверждение пароля">
+            <button onclick="register()">СОЗДАТЬ АККАУНТ</button>
         </div>
-        <div id="toast" class="toast"></div>
-        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+        <div id="cookieBox" class="cookie-box">
+            <p style="color:#00ff88;margin-bottom:10px">✅ Аккаунт создан!</p>
+            <p>Ваш Cookie (сохраните его!):</p>
+            <input type="text" id="cookieValue" readonly>
+            <button class="copy-btn" onclick="copyCookie()">📋 КОПИРОВАТЬ</button>
+            <p style="margin-top:15px;color:#f39c12">⚠️ Этот ключ нужен для входа в лаунчер!</p>
+            <button onclick="goToLogin()" style="margin-top:15px;background:#008844">ПЕРЕЙТИ К ВХОДУ</button>
+        </div>
+        <div id="message" class="message"></div>
+        <div class="footer">
+            <a href="login.html">Уже есть аккаунт? Войти</a>
+        </div>
     </div>
-    <script src="auth.js"></script>
+
     <script>
-        async function register() {
-            const username = document.getElementById('signupUsername').value.trim();
-            const password = document.getElementById('signupPassword').value;
-            const confirm = document.getElementById('signupConfirmPassword').value;
+        // Простое сохранение в localStorage (для демонстрации)
+        function getUsers() {
+            const users = localStorage.getItem('robloex_users');
+            return users ? JSON.parse(users) : [];
+        }
+        
+        function saveUsers(users) {
+            localStorage.setItem('robloex_users', JSON.stringify(users));
+        }
+        
+        function generateCookie() {
+            return [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+        }
+        
+        function hashPassword(pwd) {
+            let hash = 0;
+            for (let i = 0; i < pwd.length; i++) {
+                hash = ((hash << 5) - hash) + pwd.charCodeAt(i);
+                hash |= 0;
+            }
+            return btoa(hash.toString() + pwd).slice(0, 32);
+        }
+        
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            setTimeout(() => {
+                msg.style.display = 'none';
+                msg.className = 'message';
+            }, 5000);
+        }
+        
+        function register() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirm').value;
             
             if (!username || !password) {
-                showToast('Заполните все поля!', true);
-                return;
-            }
-            
-            const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-            if (!usernameRegex.test(username)) {
-                showToast('Имя пользователя должно быть 3-20 символов (латиница, цифры, _)!', true);
-                return;
-            }
-            
-            if (password.length < 4) {
-                showToast('Пароль должен быть не менее 4 символов!', true);
+                showMessage('Заполните все поля!', 'error');
                 return;
             }
             
             if (password !== confirm) {
-                showToast('Пароли не совпадают!', true);
+                showMessage('Пароли не совпадают!', 'error');
                 return;
             }
             
-            const result = await registerUser(username, password);
-            if (result.success) {
-                showToast('Регистрация успешна! Перенаправление на вход...');
-                setTimeout(() => {
-                    window.location.href = '/robloexauth/login.html';
-                }, 1500);
-            } else {
-                showToast(result.message, true);
+            const users = getUsers();
+            if (users.find(u => u.username === username)) {
+                showMessage('Пользователь уже существует!', 'error');
+                return;
             }
+            
+            const cookie = generateCookie();
+            const newUser = {
+                username: username,
+                password: hashPassword(password),
+                cookie: cookie,
+                role: 'user',
+                created: new Date().toISOString()
+            };
+            
+            users.push(newUser);
+            saveUsers(users);
+            
+            document.getElementById('registerForm').style.display = 'none';
+            document.getElementById('cookieValue').value = cookie;
+            document.getElementById('cookieBox').style.display = 'block';
         }
         
-        // Если пользователь уже залогинен, отправляем на главную
-        checkAuth().then(user => {
-            if (user) window.location.href = '/robloexauth/home.html';
-        });
+        function copyCookie() {
+            const input = document.getElementById('cookieValue');
+            input.select();
+            document.execCommand('copy');
+            showMessage('Cookie скопирован!', 'success');
+        }
+        
+        function goToLogin() {
+            window.location.href = 'login.html';
+        }
     </script>
 </body>
 </html>
