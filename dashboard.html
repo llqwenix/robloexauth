@@ -1,41 +1,266 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=/robloexauth/home.html">
-    <title>Robloex Launcher</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robloex - Профиль</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #0a0f0a 0%, #0a2e0a 50%, #0a0f0a 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
         }
-        .loader {
+        .info-card {
+            background: rgba(0, 20, 0, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            transition: all 0.3s;
+        }
+        .info-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 255, 136, 0.5);
+        }
+        .info-card h4 {
+            color: #00ff88;
+            margin-bottom: 15px;
+        }
+        .skin-preview-container {
             text-align: center;
+        }
+        .skin-preview {
+            width: 128px;
+            height: 128px;
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+            margin-bottom: 10px;
+            border-radius: 15px;
+            border: 2px solid #00aa44;
+            background: #0a1a0a;
+            display: none;
+        }
+        .skin-preview[src] {
+            display: inline-block;
+        }
+        .cookie-box {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .cookie-box input {
+            font-family: monospace;
+            font-size: 11px;
+            margin-bottom: 10px;
+        }
+        .copy-btn {
+            background: rgba(0, 100, 0, 0.8);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .copy-btn:hover {
+            background: #008844;
+        }
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #00aa44;
+            color: #00aa66;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-secondary:hover {
+            background: rgba(0, 170, 68, 0.2);
+            border-color: #00ff88;
             color: #00ff88;
         }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(0, 255, 136, 0.3);
-            border-top-color: #00ff88;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+        .btn-danger {
+            background: linear-gradient(135deg, #4a0a0a, #aa2200);
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .btn-danger:hover {
+            background: #aa2200;
+        }
+        .admin-badge {
+            background: #f39c12;
+            color: #0a0f0a;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .skin-hint {
+            font-size: 10px;
+            color: #008844;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="loader">
-        <div class="spinner"></div>
-        <p>Перенаправление...</p>
-        <p><a href="home.html" style="color: #00ff88;">Нажмите здесь</a>, если не происходит автоматического перенаправления</p>
+    <div class="container">
+        <nav class="navbar">
+            <div class="logo">ROBLOEX</div>
+            <div class="nav-links" id="navLinks">
+                <a href="home.html">ГЛАВНАЯ</a>
+                <a href="dashboard.html" class="active">ПРОФИЛЬ</a>
+            </div>
+            <div id="userInfo"></div>
+        </nav>
+        
+        <div class="glass-card">
+            <div class="card-header">👤 МОЙ ПРОФИЛЬ</div>
+            <div class="dashboard-grid">
+                <div class="info-card">
+                    <h4>ИНФОРМАЦИЯ</h4>
+                    <p><strong>Имя:</strong> <span id="profileUsername" style="color: #00ff88;">-</span></p>
+                    <p><strong>Роль:</strong> <span id="profileRole" style="color: #00ff88;">-</span></p>
+                    <p><strong>Дата регистрации:</strong> <span id="profileCreated" style="color: #00ff88;">-</span></p>
+                </div>
+                <div class="info-card">
+                    <h4>🎨 СКИН ПЕРСОНАЖА</h4>
+                    <div class="skin-preview-container">
+                        <img id="skinPreview" class="skin-preview" alt="Превью скина">
+                        <button class="btn-secondary" onclick="document.getElementById('skinFile').click()">📁 ВЫБРАТЬ ФАЙЛ</button>
+                        <button class="btn-secondary btn-danger" onclick="removeSkin()" style="margin-top: 10px;">🗑 УДАЛИТЬ СКИН</button>
+                        <input type="file" id="skinFile" accept="image/png" style="display: none;" onchange="handleSkinUpload(this.files[0])">
+                        <p class="skin-hint">Поддерживаются PNG, размер 64x64 или 64x32 пикселей</p>
+                    </div>
+                </div>
+                <div class="info-card">
+                    <h4>🔑 КЛЮЧ ДОСТУПА (COOKIE)</h4>
+                    <div class="cookie-box">
+                        <input type="text" id="userCookie" readonly>
+                        <button class="copy-btn" onclick="copyCookie()">📋 КОПИРОВАТЬ</button>
+                    </div>
+                    <small>Используйте этот ключ для входа в лаунчер</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
     </div>
+    
+    <div id="toast" class="toast"></div>
+    
+    <script src="auth.js"></script>
+    <script>
+        let currentUserData = null;
+        
+        async function loadDashboard() {
+            // Проверяем авторизацию
+            const user = checkAuth();
+            
+            if (!user) {
+                // Если не авторизован, перенаправляем на страницу входа
+                redirectToLogin();
+                return;
+            }
+            
+            currentUserData = user;
+            
+            // Обновляем навбар
+            const userInfo = document.getElementById('userInfo');
+            userInfo.innerHTML = `
+                <div class="user-info">
+                    <div class="user-avatar">${user.username[0].toUpperCase()}</div>
+                    <span>${user.username} ${user.username === 'vynzxluf' ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
+                    <button class="logout-btn" onclick="logout()">ВЫХОД</button>
+                </div>
+            `;
+            
+            // Показываем ссылку на админ-панель только для vynzxluf
+            const navLinks = document.getElementById('navLinks');
+            if (user.username === 'vynzxluf') {
+                if (!document.querySelector('.admin-link')) {
+                    const adminLink = document.createElement('a');
+                    adminLink.href = 'admin.html';
+                    adminLink.textContent = 'АДМИН-ПАНЕЛЬ';
+                    adminLink.className = 'admin-link';
+                    navLinks.appendChild(adminLink);
+                }
+            }
+            
+            // Заполняем информацию
+            document.getElementById('profileUsername').textContent = user.username;
+            document.getElementById('profileRole').textContent = user.role === 'admin' ? 'Администратор' : 'Пользователь';
+            
+            // Получаем дату регистрации из users
+            const users = getUsers();
+            const userData = users.find(u => u.username === user.username);
+            if (userData && userData.created) {
+                document.getElementById('profileCreated').textContent = new Date(userData.created).toLocaleDateString();
+            } else {
+                document.getElementById('profileCreated').textContent = 'Неизвестно';
+            }
+            
+            document.getElementById('userCookie').value = user.cookie || 'Нет cookie';
+            
+            // Загружаем скин
+            const savedSkin = getSkin(user.username);
+            const preview = document.getElementById('skinPreview');
+            if (savedSkin) {
+                preview.src = savedSkin;
+                preview.style.display = 'inline-block';
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+        
+        function handleSkinUpload(file) {
+            if (!file) return;
+            
+            if (!file.type.match('image/png')) {
+                showToast('Пожалуйста, выберите PNG файл!', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    if ((img.width === 64 && img.height === 64) || (img.width === 64 && img.height === 32)) {
+                        // Сохраняем скин
+                        saveSkin(currentUserData.username, e.target.result);
+                        const preview = document.getElementById('skinPreview');
+                        preview.src = e.target.result;
+                        preview.style.display = 'inline-block';
+                        showToast('Скин загружен! Он появится в лаунчере после перезапуска.', 'success');
+                    } else {
+                        showToast('Неверный размер! Поддерживаются 64x64 или 64x32 пикселей.', 'error');
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function removeSkin() {
+            if (confirm('Вы уверены, что хотите удалить скин? Будет восстановлен стандартный скин.')) {
+                deleteSkin(currentUserData.username);
+                const preview = document.getElementById('skinPreview');
+                preview.style.display = 'none';
+                preview.src = '';
+                showToast('Скин удалён!', 'success');
+            }
+        }
+        
+        function copyCookie() {
+            const input = document.getElementById('userCookie');
+            input.select();
+            document.execCommand('copy');
+            showToast('Cookie скопирован!', 'success');
+        }
+        
+        // Запускаем загрузку страницы
+        loadDashboard();
+    </script>
 </body>
 </html>
