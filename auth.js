@@ -8,8 +8,8 @@ const NEWS_KEY = 'robloex_news';
 const CURRENT_USER_KEY = 'robloex_current_user';
 const SKINS_STORAGE_KEY = 'robloex_skins';
 
-// ========== НАСТРОЙКИ АДМИНА ==========
-const ADMIN_USERNAME = 'vynzxluf'; // Только этот пользователь имеет доступ к админ-панели
+// ========== НАСТРОЙКИ АДМИНОВ ==========
+const ADMIN_USERNAMES = ['vynzxluf', 'vzxjall']; // Список администраторов
 
 // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 function showToast(message, type = 'success') {
@@ -374,11 +374,11 @@ function checkAuth() {
     return null;
 }
 
-// ========== АДМИН-ФУНКЦИИ (только для vynzxluf) ==========
+// ========== АДМИН-ФУНКЦИИ ==========
 function isAdmin() {
     const user = getCurrentUser();
-    // Только пользователь с именем vynzxluf имеет права администратора
-    return user && user.username === ADMIN_USERNAME;
+    // Проверяем, есть ли пользователь в списке администраторов
+    return user && ADMIN_USERNAMES.includes(user.username);
 }
 
 function getAllUsers() {
@@ -386,6 +386,10 @@ function getAllUsers() {
 }
 
 function deleteUser(username) {
+    // Нельзя удалять администраторов
+    if (ADMIN_USERNAMES.includes(username)) {
+        return false;
+    }
     let users = getUsers();
     users = users.filter(u => u.username !== username);
     saveUsers(users);
@@ -396,7 +400,8 @@ function deleteUser(username) {
 function changeUserRole(username, newRole) {
     const users = getUsers();
     const user = users.find(u => u.username === username);
-    if (user && username !== ADMIN_USERNAME) {
+    // Нельзя изменять роль администраторов
+    if (user && !ADMIN_USERNAMES.includes(username)) {
         user.role = newRole;
         saveUsers(users);
         return true;
