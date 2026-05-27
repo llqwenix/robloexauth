@@ -3,21 +3,13 @@
     {
       "username": "admin",
       "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
-      "cookie": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234",
+      "cookie": "admin_cookie_here",
       "role": "admin",
-      "created": "2024-01-01"
-    },
-    {
-      "username": "player1",
-      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
-      "cookie": "b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345",
-      "role": "user",
-      "created": "2024-01-02"
+      "created": "2024-01-01T00:00:00.000Z"
     }
   ],
   "settings": {
-    "allow_registration": false,
-    "version": "2.0",
-    "maintenance": false
+    "maintenance": false,
+    "version": "2.0"
   }
 }
