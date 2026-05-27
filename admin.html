@@ -235,6 +235,8 @@
         
         function loadRequests() {
             const requests = getRequests();
+            console.log('📋 Загружено заявок:', requests.length);
+            
             const pending = requests.filter(r => r.status === 'pending');
             const processed = requests.filter(r => r.status !== 'pending');
             
@@ -271,26 +273,71 @@
         }
         
         function approveRequest(requestId) {
-            if (approveRequest(requestId, currentAdmin.username)) {
-                showToast('Заявка одобрена! Пользователь создан.', 'success');
-                loadRequests();
-                loadUsers();
-            } else {
-                showToast('Ошибка при одобрении заявки', 'error');
+            console.log('✅ Одобрение заявки:', requestId);
+            
+            // Получаем заявку
+            const requests = getRequests();
+            const request = requests.find(r => r.id === requestId);
+            
+            if (!request) {
+                showToast('Заявка не найдена!', 'error');
+                return;
             }
+            
+            console.log('Заявка:', request);
+            
+            // Создаём пользователя
+            const users = getUsers();
+            const cookie = generateCookie();
+            
+            const newUser = {
+                username: request.username,
+                password: request.password,
+                cookie: cookie,
+                role: 'user',
+                created: new Date().toISOString()
+            };
+            
+            users.push(newUser);
+            saveUsers(users);
+            console.log('✅ Пользователь создан:', newUser);
+            console.log('📋 Все пользователи:', users);
+            
+            // Обновляем статус заявки
+            request.status = 'approved';
+            request.reviewedBy = currentAdmin.username;
+            request.reviewedAt = new Date().toISOString();
+            saveRequests(requests);
+            
+            showToast(`Пользователь ${request.username} создан! Cookie: ${cookie}`, 'success');
+            loadRequests();
+            loadUsers();
         }
         
         function denyRequest(requestId) {
-            if (denyRequest(requestId, currentAdmin.username)) {
-                showToast('Заявка отклонена', 'success');
-                loadRequests();
-            } else {
-                showToast('Ошибка при отклонении заявки', 'error');
+            console.log('❌ Отклонение заявки:', requestId);
+            
+            const requests = getRequests();
+            const request = requests.find(r => r.id === requestId);
+            
+            if (!request) {
+                showToast('Заявка не найдена!', 'error');
+                return;
             }
+            
+            request.status = 'denied';
+            request.reviewedBy = currentAdmin.username;
+            request.reviewedAt = new Date().toISOString();
+            saveRequests(requests);
+            
+            showToast(`Заявка ${request.username} отклонена`, 'success');
+            loadRequests();
         }
         
         function loadUsers() {
             const users = getAllUsers();
+            console.log('📋 Загружено пользователей:', users.length);
+            
             const container = document.getElementById('usersList');
             
             if (users.length === 0) {
@@ -306,6 +353,7 @@
                         <p><strong>👤 ${escapeHtml(user.username)}</strong> ${isAdminUser ? '<span class="admin-badge">АДМИНИСТРАТОР</span>' : ''}</p>
                         <p>Роль: ${user.role === 'admin' ? '👑 Администратор' : '👤 Пользователь'}</p>
                         <p>📅 Создан: ${new Date(user.created).toLocaleDateString()}</p>
+                        <p>🔑 Cookie: <span style="font-family: monospace; font-size: 10px;">${user.cookie ? user.cookie.substring(0, 20) + '...' : 'Нет'}</span></p>
                         ${ban ? `<p style="color: #e74c3c;">🚫 Забанен${ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда'}</p>` : ''}
                         <div style="margin-top: 10px;">
                             ${!isAdminUser ? `
@@ -324,7 +372,6 @@
         function changeRole(username, newRole) {
             if (ADMIN_USERNAMES.includes(username)) {
                 showToast('Нельзя изменить роль системного администратора!', 'error');
-                // Возвращаем правильное значение в select
                 const user = getAllUsers().find(u => u.username === username);
                 document.getElementById(`role-${username}`).value = user.role;
                 return;
