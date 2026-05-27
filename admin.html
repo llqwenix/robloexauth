@@ -426,4 +426,61 @@
             
             container.innerHTML = news.map(item => `
                 <div class="news-item ${item.pinned ? 'news-pinned' : ''}">
-                    <div style="display: flex; justify-content: space-between; align-items:
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="color: #00ff88;">${item.image || '📰'} ${escapeHtml(item.title)} ${item.pinned ? '📌' : ''}</h4>
+                        <small>${new Date(item.date).toLocaleString()}</small>
+                    </div>
+                    <p style="margin-top: 10px; white-space: pre-wrap;">${escapeHtml(item.content)}</p>
+                    <div style="margin-top: 10px;">
+                        <button class="btn-approve" onclick="togglePinNews(${item.id}, ${!item.pinned})" style="background: #3498db;">${item.pinned ? '📌 ОТКРЕПИТЬ' : '📌 ЗАКРЕПИТЬ'}</button>
+                        <button class="btn-delete" onclick="deleteNewsItem(${item.id})">🗑 УДАЛИТЬ</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function addNewsFromUI() {
+            const title = document.getElementById('newsTitle').value.trim();
+            const content = document.getElementById('newsContent').value.trim();
+            const image = document.getElementById('newsImage').value.trim() || '📰';
+            const pinned = document.getElementById('newsPinned').checked;
+            
+            if (!title || !content) {
+                showToast('Введите заголовок и текст новости!', 'error');
+                return;
+            }
+            
+            addNews(title, content, image, pinned);
+            showToast('Новость добавлена!', 'success');
+            
+            document.getElementById('newsTitle').value = '';
+            document.getElementById('newsContent').value = '';
+            document.getElementById('newsImage').value = '';
+            document.getElementById('newsPinned').checked = false;
+            
+            loadNews();
+        }
+        
+        function togglePinNews(newsId, isPinned) {
+            updateNewsPinned(newsId, isPinned);
+            loadNews();
+        }
+        
+        function deleteNewsItem(newsId) {
+            if (confirm('Удалить новость?')) {
+                deleteNews(newsId);
+                showToast('Новость удалена', 'success');
+                loadNews();
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        loadAdminPanel();
+    </script>
+</body>
+</html>
