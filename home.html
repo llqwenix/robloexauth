@@ -5,12 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robloex - Главная</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .news-item {
+            background: rgba(0, 20, 0, 0.6);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            transition: all 0.3s;
+        }
+        .news-item:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0, 255, 136, 0.5);
+        }
+        .news-pinned {
+            border-left: 4px solid #f39c12;
+        }
+        .news-date {
+            font-size: 11px;
+            color: #008844;
+            margin-bottom: 5px;
+        }
+        .news-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+        .news-content {
+            color: #00aa66;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .admin-badge {
+            background: #f39c12;
+            color: #0a0f0a;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <nav class="navbar">
             <div class="logo">ROBLOEX</div>
-            <div class="nav-links">
+            <div class="nav-links" id="navLinks">
                 <a href="home.html" class="active">ГЛАВНАЯ</a>
                 <a href="dashboard.html">ПРОФИЛЬ</a>
             </div>
@@ -40,6 +82,11 @@
             </div>
         </div>
         
+        <div class="glass-card">
+            <div class="card-header">📰 ПОСЛЕДНИЕ НОВОСТИ</div>
+            <div id="newsContainer"></div>
+        </div>
+        
         <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
     </div>
     
@@ -47,23 +94,74 @@
     
     <script src="auth.js"></script>
     <script>
-        function loadHomePage() {
+        let currentUserData = null;
+        
+        async function loadHomePage() {
+            // Проверяем авторизацию
             const user = checkAuth();
+            
             if (!user) {
+                // Если не авторизован, перенаправляем на страницу входа
                 redirectToLogin();
                 return;
             }
             
+            currentUserData = user;
+            
+            // Обновляем навбар
             const userInfo = document.getElementById('userInfo');
             userInfo.innerHTML = `
                 <div class="user-info">
                     <div class="user-avatar">${user.username[0].toUpperCase()}</div>
-                    <span>${user.username}</span>
+                    <span>${user.username} ${user.username === 'vynzxluf' ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
                     <button class="logout-btn" onclick="logout()">ВЫХОД</button>
                 </div>
             `;
+            
+            // Показываем ссылку на админ-панель только для vynzxluf
+            const navLinks = document.getElementById('navLinks');
+            if (user.username === 'vynzxluf') {
+                if (!document.querySelector('.admin-link')) {
+                    const adminLink = document.createElement('a');
+                    adminLink.href = 'admin.html';
+                    adminLink.textContent = 'АДМИН-ПАНЕЛЬ';
+                    adminLink.className = 'admin-link';
+                    navLinks.appendChild(adminLink);
+                }
+            }
+            
+            // Загружаем новости
+            loadNewsOnHome();
         }
         
+        function loadNewsOnHome() {
+            const news = getNews();
+            const container = document.getElementById('newsContainer');
+            
+            if (news.length === 0) {
+                container.innerHTML = '<p style="color: #00aa66; text-align: center;">Новостей пока нет</p>';
+                return;
+            }
+            
+            // Сначала закреплённые, потом остальные
+            const sortedNews = [...news].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+            
+            container.innerHTML = sortedNews.map(item => `
+                <div class="news-item ${item.pinned ? 'news-pinned' : ''}">
+                    <div class="news-date">📅 ${new Date(item.date).toLocaleString()}</div>
+                    <div class="news-title">${item.image || '📰'} ${escapeHtml(item.title)} ${item.pinned ? '📌' : ''}</div>
+                    <div class="news-content">${escapeHtml(item.content)}</div>
+                </div>
+            `).join('');
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Запускаем загрузку страницы
         loadHomePage();
     </script>
 </body>
