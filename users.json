@@ -1,0 +1,23 @@
+{
+  "users": [
+    {
+      "username": "Notch",
+      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "role": "admin",
+      "created": "2024-01-01",
+      "hwid": "allowed"
+    },
+    {
+      "username": "Vynzxluf",
+      "password": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8",
+      "role": "user",
+      "created": "2024-01-02",
+      "hwid": "allowed"
+    }
+  ],
+  "settings": {
+    "allow_registration": false,
+    "version": "2.0",
+    "maintenance": false
+  }
+}
