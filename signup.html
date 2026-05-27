@@ -3,42 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robloex - Регистрация</title>
+    <title>Robloex - Подача заявки</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <div class="glass-card signup-card">
-            <div class="card-header">📝 РЕГИСТРАЦИЯ</div>
+            <div class="card-header">📝 ПОДАТЬ ЗАЯВКУ</div>
             
-            <div id="registerForm">
-                <div class="form-group">
-                    <label>ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
-                    <input type="text" id="username" placeholder="Введите имя пользователя">
-                    <small>3-20 символов, латиница, цифры, подчёркивание</small>
-                </div>
-                <div class="form-group">
-                    <label>ПАРОЛЬ</label>
-                    <input type="password" id="password" placeholder="Введите пароль">
-                    <small>Не менее 4 символов</small>
-                </div>
-                <div class="form-group">
-                    <label>ПОДТВЕРЖДЕНИЕ ПАРОЛЯ</label>
-                    <input type="password" id="confirm" placeholder="Повторите пароль">
-                </div>
-                <button class="btn-primary" onclick="register()">СОЗДАТЬ АККАУНТ</button>
+            <div class="form-group">
+                <label>ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
+                <input type="text" id="username" placeholder="Введите имя пользователя" autocomplete="off">
+                <small>3-20 символов, латиница, цифры, подчёркивание</small>
             </div>
-            
-            <div id="cookieBox" class="cookie-box" style="display: none;">
-                <h4 style="color: #00ff88; margin-bottom: 15px;">✅ АККАУНТ СОЗДАН!</h4>
-                <p>Ваш Cookie (сохраните его!):</p>
-                <input type="text" id="cookieValue" readonly>
-                <button class="copy-btn" onclick="copyCookie()">📋 КОПИРОВАТЬ COOKIE</button>
-                <p style="margin-top: 15px; color: #f39c12;">⚠️ Этот ключ нужен для входа в лаунчер!</p>
-                <button class="btn-primary" onclick="goToLogin()" style="margin-top: 15px; background: #008844;">ПЕРЕЙТИ К ВХОДУ</button>
+            <div class="form-group">
+                <label>ПАРОЛЬ</label>
+                <input type="password" id="password" placeholder="Введите пароль">
+                <small>Не менее 4 символов</small>
             </div>
+            <div class="form-group">
+                <label>ПОДТВЕРЖДЕНИЕ ПАРОЛЯ</label>
+                <input type="password" id="confirm" placeholder="Повторите пароль">
+            </div>
+            <button class="btn-primary" onclick="submitRequest()">📨 ОТПРАВИТЬ ЗАЯВКУ</button>
             
-            <div id="message" class="toast" style="display: none; position: relative; bottom: auto; right: auto; margin-top: 20px;"></div>
+            <div class="info-box" style="margin-top: 20px; padding: 15px; background: rgba(0, 255, 68, 0.1); border-radius: 10px;">
+                <p style="color: #00aa66; font-size: 13px;">💡 После отправки заявки дождитесь её одобрения администратором. Вы получите Cookie для входа в лаунчер.</p>
+            </div>
             
             <div class="auth-footer">
                 Уже есть аккаунт? <a href="login.html">ВОЙТИ</a>
@@ -51,14 +42,12 @@
     
     <script src="auth.js"></script>
     <script>
-        let generatedCookie = null;
-        
         function validateUsername(username) {
             const regex = /^[a-zA-Z0-9_]{3,20}$/;
             return regex.test(username);
         }
         
-        function register() {
+        async function submitRequest() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const confirm = document.getElementById('confirm').value;
@@ -83,31 +72,26 @@
                 return;
             }
             
-            const result = registerUser(username, password);
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ ОТПРАВКА...';
+            
+            const result = createRequest(username, password);
             
             if (result.success) {
-                generatedCookie = result.cookie;
-                document.getElementById('registerForm').style.display = 'none';
-                document.getElementById('cookieValue').value = generatedCookie;
-                document.getElementById('cookieBox').style.display = 'block';
-                showToast('Аккаунт успешно создан!', 'success');
+                showToast(result.message, 'success');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('confirm').value = '';
             } else {
                 showToast(result.message, 'error');
             }
+            
+            btn.disabled = false;
+            btn.textContent = '📨 ОТПРАВИТЬ ЗАЯВКУ';
         }
         
-        function copyCookie() {
-            const input = document.getElementById('cookieValue');
-            input.select();
-            document.execCommand('copy');
-            showToast('Cookie скопирован!', 'success');
-        }
-        
-        function goToLogin() {
-            window.location.href = 'login.html';
-        }
-        
-        // Проверка авторизации
+        // Если уже залогинены, перенаправляем
         const currentUser = getCurrentUser();
         if (currentUser) {
             window.location.href = 'home.html';
