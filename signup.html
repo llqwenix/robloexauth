@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robloex Launcher - Регистрация</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="glass-card login-card">
+            <div class="card-header">📝 РЕГИСТРАЦИЯ</div>
+            <div class="form-group">
+                <label>ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
+                <input type="text" id="signupUsername" placeholder="Введите имя пользователя">
+                <small>3-20 символов, латиница, цифры, подчёркивание</small>
+            </div>
+            <div class="form-group">
+                <label>ПАРОЛЬ</label>
+                <input type="password" id="signupPassword" placeholder="Введите пароль">
+                <small>Не менее 4 символов</small>
+            </div>
+            <div class="form-group">
+                <label>ПОДТВЕРЖДЕНИЕ ПАРОЛЯ</label>
+                <input type="password" id="signupConfirmPassword" placeholder="Повторите пароль">
+            </div>
+            <button class="btn-primary" onclick="register()">СОЗДАТЬ АККАУНТ</button>
+            <div class="auth-footer">
+                Уже есть аккаунт? <a href="/robloexauth/login.html">ВОЙТИ</a>
+            </div>
+        </div>
+        <div id="toast" class="toast"></div>
+        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+    </div>
+    <script src="auth.js"></script>
+    <script>
+        async function register() {
+            const username = document.getElementById('signupUsername').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const confirm = document.getElementById('signupConfirmPassword').value;
+            
+            if (!username || !password) {
+                showToast('Заполните все поля!', true);
+                return;
+            }
+            
+            const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+            if (!usernameRegex.test(username)) {
+                showToast('Имя пользователя должно быть 3-20 символов (латиница, цифры, _)!', true);
+                return;
+            }
+            
+            if (password.length < 4) {
+                showToast('Пароль должен быть не менее 4 символов!', true);
+                return;
+            }
+            
+            if (password !== confirm) {
+                showToast('Пароли не совпадают!', true);
+                return;
+            }
+            
+            const result = await registerUser(username, password);
+            if (result.success) {
+                showToast('Регистрация успешна! Перенаправление на вход...');
+                setTimeout(() => {
+                    window.location.href = '/robloexauth/login.html';
+                }, 1500);
+            } else {
+                showToast(result.message, true);
+            }
+        }
+        
+        // Если пользователь уже залогинен, отправляем на главную
+        checkAuth().then(user => {
+            if (user) window.location.href = '/robloexauth/home.html';
+        });
+    </script>
+</body>
+</html>
