@@ -137,13 +137,13 @@
         function loadAdminPanel() {
             const user = checkAuth();
             
-            // Проверка - только пользователь vynzxluf имеет доступ
-            if (!user || user.username !== 'vynzxluf') {
+            // Проверка - только администраторы из списка имеют доступ
+            if (!user || !ADMIN_USERNAMES.includes(user.username)) {
                 document.getElementById('adminContent').innerHTML = `
                     <div class="glass-card access-denied">
                         <div class="card-header">⛔ ДОСТУП ЗАПРЕЩЁН</div>
                         <p style="color: #e74c3c; font-size: 18px; margin-bottom: 20px;">У вас нет прав доступа к этой странице.</p>
-                        <p style="color: #00aa66;">Только администратор системы имеет доступ к админ-панели.</p>
+                        <p style="color: #00aa66;">Только администраторы системы имеют доступ к админ-панели.</p>
                         <button class="btn-primary" onclick="redirectToHome()" style="margin-top: 30px; width: auto; padding: 10px 30px;">ВЕРНУТЬСЯ НА ГЛАВНУЮ</button>
                     </div>
                 `;
@@ -300,20 +300,21 @@
             
             container.innerHTML = users.map(user => {
                 const ban = isUserBanned(user.username);
+                const isAdminUser = ADMIN_USERNAMES.includes(user.username);
                 return `
                     <div class="user-card">
-                        <p><strong>👤 ${escapeHtml(user.username)}</strong> ${user.username === 'vynzxluf' ? '<span class="admin-badge">ГЛАВНЫЙ АДМИН</span>' : ''}</p>
+                        <p><strong>👤 ${escapeHtml(user.username)}</strong> ${isAdminUser ? '<span class="admin-badge">АДМИНИСТРАТОР</span>' : ''}</p>
                         <p>Роль: ${user.role === 'admin' ? '👑 Администратор' : '👤 Пользователь'}</p>
                         <p>📅 Создан: ${new Date(user.created).toLocaleDateString()}</p>
                         ${ban ? `<p style="color: #e74c3c;">🚫 Забанен${ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда'}</p>` : ''}
                         <div style="margin-top: 10px;">
-                            ${user.username !== 'vynzxluf' ? `
+                            ${!isAdminUser ? `
                                 <select id="role-${user.username}" onchange="changeRole('${user.username}', this.value)">
                                     <option value="user" ${user.role === 'user' ? 'selected' : ''}>Пользователь</option>
                                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Администратор</option>
                                 </select>
                                 <button class="btn-delete" onclick="deleteUserAccount('${user.username}')">🗑 УДАЛИТЬ</button>
-                            ` : '<span style="color: #f39c12;">⭐ Главный администратор системы</span>'}
+                            ` : '<span style="color: #f39c12;">⭐ Системный администратор</span>'}
                         </div>
                     </div>
                 `;
@@ -321,8 +322,11 @@
         }
         
         function changeRole(username, newRole) {
-            if (username === 'vynzxluf') {
-                showToast('Нельзя изменить роль главного администратора!', 'error');
+            if (ADMIN_USERNAMES.includes(username)) {
+                showToast('Нельзя изменить роль системного администратора!', 'error');
+                // Возвращаем правильное значение в select
+                const user = getAllUsers().find(u => u.username === username);
+                document.getElementById(`role-${username}`).value = user.role;
                 return;
             }
             if (changeUserRole(username, newRole)) {
@@ -334,8 +338,8 @@
         }
         
         function deleteUserAccount(username) {
-            if (username === 'vynzxluf') {
-                showToast('Нельзя удалить главного администратора!', 'error');
+            if (ADMIN_USERNAMES.includes(username)) {
+                showToast('Нельзя удалить системного администратора!', 'error');
                 return;
             }
             if (confirm(`Удалить пользователя ${username}?`)) {
@@ -389,8 +393,8 @@
                 return;
             }
             
-            if (username === 'vynzxluf') {
-                showToast('Нельзя забанить главного администратора!', 'error');
+            if (ADMIN_USERNAMES.includes(username)) {
+                showToast('Нельзя забанить системного администратора!', 'error');
                 return;
             }
             
