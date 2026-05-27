@@ -121,6 +121,12 @@
     <script>
         let currentAdmin = null;
         
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -137,7 +143,6 @@
         function loadAdminPanel() {
             const user = checkAuth();
             
-            // Проверка - только администраторы из списка имеют доступ
             if (!user || !ADMIN_USERNAMES.includes(user.username)) {
                 document.getElementById('adminContent').innerHTML = `
                     <div class="glass-card access-denied">
@@ -235,8 +240,6 @@
         
         function loadRequests() {
             const requests = getRequests();
-            console.log('📋 Загружено заявок:', requests.length);
-            
             const pending = requests.filter(r => r.status === 'pending');
             const processed = requests.filter(r => r.status !== 'pending');
             
@@ -273,71 +276,26 @@
         }
         
         function approveRequest(requestId) {
-            console.log('✅ Одобрение заявки:', requestId);
-            
-            // Получаем заявку
-            const requests = getRequests();
-            const request = requests.find(r => r.id === requestId);
-            
-            if (!request) {
-                showToast('Заявка не найдена!', 'error');
-                return;
+            if (approveRequest(requestId, currentAdmin.username)) {
+                showToast('Заявка одобрена! Пользователь создан.', 'success');
+                loadRequests();
+                loadUsers();
+            } else {
+                showToast('Ошибка при одобрении заявки', 'error');
             }
-            
-            console.log('Заявка:', request);
-            
-            // Создаём пользователя
-            const users = getUsers();
-            const cookie = generateCookie();
-            
-            const newUser = {
-                username: request.username,
-                password: request.password,
-                cookie: cookie,
-                role: 'user',
-                created: new Date().toISOString()
-            };
-            
-            users.push(newUser);
-            saveUsers(users);
-            console.log('✅ Пользователь создан:', newUser);
-            console.log('📋 Все пользователи:', users);
-            
-            // Обновляем статус заявки
-            request.status = 'approved';
-            request.reviewedBy = currentAdmin.username;
-            request.reviewedAt = new Date().toISOString();
-            saveRequests(requests);
-            
-            showToast(`Пользователь ${request.username} создан! Cookie: ${cookie}`, 'success');
-            loadRequests();
-            loadUsers();
         }
         
         function denyRequest(requestId) {
-            console.log('❌ Отклонение заявки:', requestId);
-            
-            const requests = getRequests();
-            const request = requests.find(r => r.id === requestId);
-            
-            if (!request) {
-                showToast('Заявка не найдена!', 'error');
-                return;
+            if (denyRequest(requestId, currentAdmin.username)) {
+                showToast('Заявка отклонена', 'success');
+                loadRequests();
+            } else {
+                showToast('Ошибка при отклонении заявки', 'error');
             }
-            
-            request.status = 'denied';
-            request.reviewedBy = currentAdmin.username;
-            request.reviewedAt = new Date().toISOString();
-            saveRequests(requests);
-            
-            showToast(`Заявка ${request.username} отклонена`, 'success');
-            loadRequests();
         }
         
         function loadUsers() {
             const users = getAllUsers();
-            console.log('📋 Загружено пользователей:', users.length);
-            
             const container = document.getElementById('usersList');
             
             if (users.length === 0) {
@@ -525,14 +483,7 @@
             }
         }
         
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
         loadAdminPanel();
-
-        <script src="auth.js"></script>
+    </script>
 </body>
 </html>
