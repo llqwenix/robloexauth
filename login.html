@@ -2,57 +2,131 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robloex Launcher - Вход</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Robloex - Вход</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            background:linear-gradient(135deg,#0a0f0a 0%,#0a2e0a 50%,#0a0f0a 100%);
+            font-family:Arial,sans-serif;
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            padding:20px
+        }
+        .card{
+            background:rgba(10,30,10,0.95);
+            border-radius:20px;
+            padding:40px;
+            width:100%;
+            max-width:450px;
+            border:1px solid #00ff88
+        }
+        h1{color:#00ff88;text-align:center;margin-bottom:30px}
+        input{
+            width:100%;
+            padding:12px;
+            margin:10px 0;
+            background:#0a1a0a;
+            border:1px solid #00aa44;
+            border-radius:10px;
+            color:#00ff88;
+            font-size:14px
+        }
+        button{
+            width:100%;
+            padding:12px;
+            background:#0a4d0a;
+            border:none;
+            border-radius:10px;
+            color:white;
+            font-size:16px;
+            font-weight:bold;
+            cursor:pointer;
+            margin-top:20px
+        }
+        button:hover{background:#00aa44}
+        .message{
+            padding:10px;
+            border-radius:8px;
+            text-align:center;
+            margin-top:15px;
+            display:none
+        }
+        .success{background:rgba(0,255,136,0.2);border:1px solid #00ff88;color:#00ff88;display:block}
+        .error{background:rgba(255,68,68,0.2);border:1px solid #ff4444;color:#ff8888;display:block}
+        .footer{text-align:center;margin-top:20px;color:#008844;font-size:12px}
+        a{color:#00ff88;text-decoration:none}
+        .info{color:#00aa66;font-size:12px;text-align:center;margin-top:10px}
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="glass-card login-card">
-            <div class="card-header">🔐 ВХОД В АККАУНТ</div>
-            <div class="form-group">
-                <label>ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
-                <input type="text" id="loginUsername" placeholder="Введите имя пользователя">
-            </div>
-            <div class="form-group">
-                <label>ПАРОЛЬ</label>
-                <input type="password" id="loginPassword" placeholder="Введите пароль">
-            </div>
-            <button class="btn-primary" onclick="login()">ВОЙТИ</button>
-            <div class="auth-footer">
-                Нет аккаунта? <a href="/robloexauth/signup.html">ЗАРЕГИСТРИРОВАТЬСЯ</a>
-            </div>
+    <div class="card">
+        <h1>🔐 ВХОД</h1>
+        <input type="text" id="username" placeholder="Имя пользователя">
+        <input type="text" id="cookie" placeholder="Cookie (ключ доступа)">
+        <button onclick="login()">ВОЙТИ В ЛАУНЧЕР</button>
+        <div id="message" class="message"></div>
+        <div class="info">
+            💡 Получите Cookie после регистрации на странице <a href="signup.html">Регистрации</a>
         </div>
-        <div id="toast" class="toast"></div>
-        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+        <div class="footer">
+            <a href="signup.html">Нет аккаунта? Зарегистрироваться</a>
+        </div>
     </div>
-    <script src="auth.js"></script>
+
     <script>
-        async function login() {
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value;
+        function getUsers() {
+            const users = localStorage.getItem('robloex_users');
+            return users ? JSON.parse(users) : [];
+        }
+        
+        function hashPassword(pwd) {
+            let hash = 0;
+            for (let i = 0; i < pwd.length; i++) {
+                hash = ((hash << 5) - hash) + pwd.charCodeAt(i);
+                hash |= 0;
+            }
+            return btoa(hash.toString() + pwd).slice(0, 32);
+        }
+        
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            setTimeout(() => {
+                msg.style.display = 'none';
+                msg.className = 'message';
+            }, 5000);
+        }
+        
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const cookie = document.getElementById('cookie').value.trim();
             
-            if (!username || !password) {
-                showToast('Заполните все поля!', true);
+            if (!username || !cookie) {
+                showMessage('Введите имя пользователя и Cookie!', 'error');
                 return;
             }
             
-            const result = await loginUser(username, password);
-            if (result.success) {
-                saveSession({ username: result.username, role: result.role, cookie: result.cookie });
-                showToast('Вход выполнен! Перенаправление...');
+            const users = getUsers();
+            const user = users.find(u => u.username === username && u.cookie === cookie);
+            
+            if (user) {
+                showMessage('Вход выполнен! Теперь запустите лаунчер.', 'success');
+                // Сохраняем данные для лаунчера
+                localStorage.setItem('current_user', JSON.stringify({
+                    username: username,
+                    cookie: cookie,
+                    role: user.role
+                }));
                 setTimeout(() => {
-                    window.location.href = '/robloexauth/home.html';
-                }, 1000);
+                    window.location.href = 'home.html';
+                }, 1500);
             } else {
-                showToast(result.message, true);
+                showMessage('Неверное имя пользователя или Cookie!', 'error');
             }
         }
-        
-        // Если пользователь уже залогинен, отправляем на главную
-        checkAuth().then(user => {
-            if (user) window.location.href = '/robloexauth/home.html';
-        });
     </script>
 </body>
 </html>
