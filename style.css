@@ -1,4 +1,3 @@
-/* style.css */
 * {
     margin: 0;
     padding: 0;
@@ -6,7 +5,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     background: linear-gradient(135deg, #0a0f0a 0%, #0a2e0a 25%, #0a1a0a 50%, #0d2e0d 75%, #0a0f0a 100%);
     background-attachment: fixed;
     min-height: 100vh;
@@ -16,6 +15,81 @@ body {
 .container {
     max-width: 1200px;
     margin: 0 auto;
+}
+
+/* Анимации */
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes glowPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(0, 255, 136, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 136, 0);
+    }
+}
+
+@keyframes borderGlow {
+    0% {
+        border-color: rgba(0, 255, 136, 0.3);
+    }
+    50% {
+        border-color: rgba(0, 255, 136, 0.8);
+    }
+    100% {
+        border-color: rgba(0, 255, 136, 0.3);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Navbar */
@@ -31,6 +105,7 @@ body {
     flex-wrap: wrap;
     gap: 15px;
     border: 1px solid rgba(0, 255, 0, 0.2);
+    animation: fadeInScale 0.5s ease;
 }
 
 .logo {
@@ -40,20 +115,45 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    transition: text-shadow 0.3s;
+}
+
+.logo:hover {
+    text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
 }
 
 .nav-links {
     display: flex;
     gap: 20px;
+    align-items: center;
 }
 
 .nav-links a {
     color: #00aa66;
     text-decoration: none;
     transition: all 0.3s;
+    position: relative;
+    padding: 5px 0;
 }
 
-.nav-links a:hover, .nav-links a.active {
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #00ff88;
+    transition: width 0.3s;
+}
+
+.nav-links a:hover::after,
+.nav-links a.active::after {
+    width: 100%;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
     color: #00ff88;
     text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
 }
@@ -66,6 +166,12 @@ body {
     padding: 8px 16px;
     border-radius: 30px;
     border: 1px solid rgba(0, 255, 0, 0.2);
+    transition: all 0.3s;
+}
+
+.user-info:hover {
+    border-color: rgba(0, 255, 136, 0.5);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.1);
 }
 
 .user-avatar {
@@ -78,6 +184,11 @@ body {
     justify-content: center;
     font-weight: bold;
     color: white;
+    transition: transform 0.3s;
+}
+
+.user-avatar:hover {
+    transform: scale(1.1);
 }
 
 .logout-btn {
@@ -93,6 +204,7 @@ body {
 .logout-btn:hover {
     background: #aa2200;
     transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(255, 68, 0, 0.3);
 }
 
 /* Glass Card */
@@ -103,9 +215,17 @@ body {
     padding: 30px;
     margin-bottom: 30px;
     border: 1px solid rgba(0, 255, 0, 0.2);
+    transition: all 0.3s;
+    animation: fadeInScale 0.5s ease;
 }
 
-.login-card {
+.glass-card:hover {
+    border-color: rgba(0, 255, 136, 0.4);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.login-card,
+.signup-card {
     max-width: 500px;
     margin: 50px auto;
 }
@@ -121,6 +241,7 @@ body {
 /* Forms */
 .form-group {
     margin-bottom: 20px;
+    animation: slideInLeft 0.4s ease;
 }
 
 label {
@@ -128,9 +249,12 @@ label {
     color: #00aa66;
     margin-bottom: 8px;
     font-weight: 500;
+    transition: color 0.3s;
 }
 
-input {
+input,
+select,
+textarea {
     width: 100%;
     padding: 12px 16px;
     background: rgba(0, 20, 0, 0.8);
@@ -141,10 +265,23 @@ input {
     transition: all 0.3s;
 }
 
-input:focus {
+input:focus,
+select:focus,
+textarea:focus {
     outline: none;
     border-color: #00ff88;
     box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+    transform: scale(1.01);
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+    border-color: rgba(0, 255, 136, 0.5);
+}
+
+input::placeholder {
+    color: rgba(0, 255, 136, 0.4);
 }
 
 small {
@@ -154,6 +291,7 @@ small {
     margin-top: 5px;
 }
 
+/* Buttons */
 .btn-primary {
     background: linear-gradient(135deg, #0a4d0a, #00aa44);
     color: white;
@@ -165,11 +303,33 @@ small {
     cursor: pointer;
     transition: all 0.3s;
     width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+    left: 100%;
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 20px rgba(0, 255, 68, 0.3);
+    animation: glowPulse 0.5s;
+}
+
+.btn-primary:active {
+    transform: translateY(0);
 }
 
 .btn-secondary {
@@ -181,14 +341,24 @@ small {
     cursor: pointer;
     transition: all 0.3s;
     width: 100%;
-    margin-top: 10px;
 }
 
 .btn-secondary:hover {
     background: rgba(0, 170, 68, 0.2);
     border-color: #00ff88;
+    color: #00ff88;
+    transform: translateY(-2px);
 }
 
+.btn-danger {
+    background: linear-gradient(135deg, #4a0a0a, #aa2200);
+}
+
+.btn-danger:hover {
+    box-shadow: 0 5px 20px rgba(255, 68, 0, 0.3);
+}
+
+/* Auth footer */
 .auth-footer {
     text-align: center;
     margin-top: 20px;
@@ -198,6 +368,12 @@ small {
 .auth-footer a {
     color: #00ff88;
     text-decoration: none;
+    transition: all 0.3s;
+}
+
+.auth-footer a:hover {
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+    text-decoration: underline;
 }
 
 /* Dashboard Grid */
@@ -212,11 +388,20 @@ small {
     border-radius: 15px;
     padding: 20px;
     border: 1px solid rgba(0, 255, 0, 0.2);
+    transition: all 0.3s;
+    animation: slideInUp 0.5s ease;
+}
+
+.info-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(0, 255, 136, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 255, 68, 0.1);
 }
 
 .info-card h4 {
     color: #00ff88;
     margin-bottom: 15px;
+    font-size: 18px;
 }
 
 .info-grid {
@@ -237,10 +422,16 @@ small {
     image-rendering: crisp-edges;
     image-rendering: pixelated;
     margin-bottom: 10px;
-    border-radius: 10px;
+    border-radius: 15px;
     border: 2px solid #00aa44;
     background: #0a1a0a;
     display: none;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.skin-preview:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
 }
 
 .skin-hint {
@@ -255,6 +446,12 @@ small {
     border-radius: 10px;
     padding: 10px;
     margin: 10px 0;
+    transition: all 0.3s;
+}
+
+.cookie-box:hover {
+    background: rgba(0, 0, 0, 0.7);
+    border-color: #00ff88;
 }
 
 .cookie-box input {
@@ -271,10 +468,16 @@ small {
     padding: 8px;
     border-radius: 8px;
     cursor: pointer;
+    transition: all 0.3s;
     width: 100%;
 }
 
-/* Toast */
+.copy-btn:hover {
+    background: #008844;
+    transform: scale(1.02);
+}
+
+/* Toast message */
 .toast {
     position: fixed;
     bottom: 20px;
@@ -287,11 +490,30 @@ small {
     z-index: 1000;
     display: none;
     border: 1px solid rgba(0, 255, 0, 0.3);
+    animation: slideInRight 0.3s ease;
 }
 
 .toast.error {
     color: #ff6644;
     border-color: #ff2200;
+}
+
+.toast.success {
+    color: #00ff88;
+    border-color: #00ff88;
+}
+
+/* Loading spinner */
+.loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
 }
 
 /* Footer */
@@ -300,6 +522,7 @@ small {
     margin-top: 30px;
     color: #008844;
     font-size: 12px;
+    animation: fadeInScale 0.5s ease;
 }
 
 /* Description */
@@ -316,6 +539,12 @@ small {
 
 .info-card li {
     margin: 8px 0;
+    transition: transform 0.3s;
+}
+
+.info-card li:hover {
+    transform: translateX(5px);
+    color: #00ff88;
 }
 
 /* Scrollbar */
@@ -331,8 +560,38 @@ small {
 ::-webkit-scrollbar-thumb {
     background: #00aa44;
     border-radius: 10px;
+    transition: background 0.3s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
     background: #00ff88;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .nav-links {
+        justify-content: center;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .glass-card {
+        padding: 20px;
+    }
+    
+    .login-card,
+    .signup-card {
+        margin: 20px auto;
+    }
 }
