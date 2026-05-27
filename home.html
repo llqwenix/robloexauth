@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robloex Launcher - Главная</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="logo">ROBLOEX</div>
+            <div class="nav-links">
+                <a href="/robloexauth/home.html" class="active">ГЛАВНАЯ</a>
+                <a href="/robloexauth/dashboard.html" id="dashboardLink">ПРОФИЛЬ</a>
+            </div>
+            <div id="userInfo">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">U</div>
+                    <span id="userName">User</span>
+                    <button class="logout-btn" onclick="logout()">ВЫХОД</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="glass-card">
+            <div class="card-header">🎮 ДОБРО ПОЖАЛОВАТЬ В ROBLOEX LAUNCHER</div>
+            <p class="description">
+                Современный лаунчер для Minecraft с поддержмой модов, скинов и многого другого.
+            </p>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>🚀 ВОЗМОЖНОСТИ</h4>
+                    <ul>
+                        <li>Множество версий Minecraft</li>
+                        <li>Поддержка Forge и Fabric</li>
+                        <li>Управление скинами</li>
+                        <li>Автоматические обновления</li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h4>📥 СКАЧАТЬ ЛАУНЧЕР</h4>
+                    <p>Скачайте лаунчер и начните играть!</p>
+                    <button class="btn-primary" onclick="window.location.href='https://github.com/llqwenix/robloexauth/releases/download/v1.0/RobloexLauncher_Setup.exe'">СКАЧАТЬ</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="toast" class="toast"></div>
+        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+    </div>
+    <script src="auth.js"></script>
+    <script>
+        async function loadHomePage() {
+            const user = await checkAuth();
+            if (!user) {
+                redirectToLogin();
+                return;
+            }
+            document.getElementById('userName').textContent = user.username;
+            document.getElementById('userAvatar').textContent = user.username[0].toUpperCase();
+            const dashboardLink = document.getElementById('dashboardLink');
+            if (dashboardLink) {
+                dashboardLink.href = '/robloexauth/dashboard.html';
+            }
+        }
+        
+        function logout() {
+            clearSession();
+            redirectToLogin();
+        }
+        
+        loadHomePage();
+    </script>
+</body>
+</html>
