@@ -1,6 +1,6 @@
 // auth.js - общая логика для всех страниц
 
-// Настройки
+// ========== НАСТРОЙКИ ==========
 const STORAGE_KEY = 'robloex_users';
 const REQUESTS_KEY = 'robloex_requests';
 const BANS_KEY = 'robloex_bans';
@@ -48,12 +48,14 @@ function getUsers() {
         const parsed = JSON.parse(users);
         return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
+        console.error('Ошибка парсинга users:', e);
         return [];
     }
 }
 
 function saveUsers(users) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+    console.log('💾 Пользователи сохранены:', users.length);
 }
 
 // ========== РАБОТА С ЗАЯВКАМИ ==========
@@ -64,19 +66,30 @@ function getRequests() {
         const parsed = JSON.parse(requests);
         return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
+        console.error('Ошибка парсинга requests:', e);
         return [];
     }
 }
 
 function saveRequests(requests) {
     localStorage.setItem(REQUESTS_KEY, JSON.stringify(requests));
+    console.log('💾 Заявки сохранены:', requests.length);
 }
 
 function createRequest(username, password) {
+    console.log('📝 Создание заявки для:', username);
+    
     const requests = getRequests();
     
+    // Проверяем, нет ли уже заявки от этого пользователя
     if (requests.some(r => r.username === username)) {
         return { success: false, message: 'Заявка от этого пользователя уже существует!' };
+    }
+    
+    // Проверяем, не зарегистрирован ли уже пользователь
+    const users = getUsers();
+    if (users.some(u => u.username === username)) {
+        return { success: false, message: 'Пользователь с таким именем уже зарегистрирован!' };
     }
     
     const newRequest = {
@@ -91,18 +104,29 @@ function createRequest(username, password) {
     
     requests.push(newRequest);
     saveRequests(requests);
+    console.log('✅ Заявка создана:', newRequest);
+    
     return { success: true, message: 'Заявка отправлена на рассмотрение!' };
 }
 
 function approveRequest(requestId, adminName) {
+    console.log('✅ Одобрение заявки:', requestId, 'администратором:', adminName);
+    
     const requests = getRequests();
     const requestIndex = requests.findIndex(r => r.id === requestId);
     
-    if (requestIndex === -1) return false;
+    if (requestIndex === -1) {
+        console.log('❌ Заявка не найдена');
+        return false;
+    }
     
     const request = requests[requestIndex];
-    if (request.status !== 'pending') return false;
+    if (request.status !== 'pending') {
+        console.log('❌ Заявка уже обработана, статус:', request.status);
+        return false;
+    }
     
+    // Создаём пользователя
     const users = getUsers();
     const cookie = generateCookie();
     
@@ -118,27 +142,36 @@ function approveRequest(requestId, adminName) {
     
     users.push(newUser);
     saveUsers(users);
+    console.log('✅ Пользователь создан:', newUser);
     
+    // Обновляем статус заявки
     request.status = 'approved';
     request.reviewedBy = adminName;
     request.reviewedAt = new Date().toISOString();
     requests[requestIndex] = request;
     saveRequests(requests);
     
+    console.log('✅ Заявка одобрена');
     return true;
 }
 
 function denyRequest(requestId, adminName) {
+    console.log('❌ Отклонение заявки:', requestId, 'администратором:', adminName);
+    
     const requests = getRequests();
     const requestIndex = requests.findIndex(r => r.id === requestId);
     
-    if (requestIndex === -1) return false;
+    if (requestIndex === -1) {
+        console.log('❌ Заявка не найдена');
+        return false;
+    }
     
     requests[requestIndex].status = 'denied';
     requests[requestIndex].reviewedBy = adminName;
     requests[requestIndex].reviewedAt = new Date().toISOString();
     saveRequests(requests);
     
+    console.log('✅ Заявка отклонена');
     return true;
 }
 
@@ -159,11 +192,14 @@ function saveBans(bans) {
 
 function isUserBanned(username) {
     const bans = getBans();
-    const activeBan = bans.find(b => b.username === username && (!b.until || new Date(b.until) > new Date()));
+    const now = new Date();
+    const activeBan = bans.find(b => b.username === username && (!b.until || new Date(b.until) > now));
     return activeBan || null;
 }
 
 function banUser(username, reason, durationHours, adminName) {
+    console.log('🚫 Бан пользователя:', username, 'причина:', reason);
+    
     const bans = getBans();
     const filteredBans = bans.filter(b => b.username !== username);
     
@@ -178,19 +214,26 @@ function banUser(username, reason, durationHours, adminName) {
     });
     
     saveBans(filteredBans);
+    console.log('✅ Пользователь забанен');
     
+    // Если пользователь сейчас залогинен, разлогиниваем его
     const currentUser = getCurrentUser();
     if (currentUser && currentUser.username === username) {
         clearCurrentUser();
+        console.log('👤 Пользователь разлогинен');
     }
     
     return true;
 }
 
 function unbanUser(username) {
+    console.log('🔓 Разбан пользователя:', username);
+    
     const bans = getBans();
     const filteredBans = bans.filter(b => b.username !== username);
     saveBans(filteredBans);
+    
+    console.log('✅ Пользователь разбанен');
     return true;
 }
 
@@ -231,6 +274,8 @@ function saveNews(news) {
 }
 
 function addNews(title, content, image = '📰', isPinned = false) {
+    console.log('📰 Добавление новости:', title);
+    
     const news = getNews();
     const newNews = {
         id: Date.now(),
@@ -242,27 +287,38 @@ function addNews(title, content, image = '📰', isPinned = false) {
     };
     news.unshift(newNews);
     saveNews(news);
+    
+    console.log('✅ Новость добавлена');
     return newNews;
 }
 
 function deleteNews(newsId) {
+    console.log('🗑 Удаление новости:', newsId);
+    
     const news = getNews();
     const filtered = news.filter(n => n.id !== newsId);
     saveNews(filtered);
+    
+    console.log('✅ Новость удалена');
     return true;
 }
 
 function updateNewsPinned(newsId, isPinned) {
+    console.log('📌 Изменение закрепления новости:', newsId, isPinned);
+    
     const news = getNews();
     const newsItem = news.find(n => n.id === newsId);
     if (newsItem) {
         newsItem.pinned = isPinned;
         saveNews(news);
+        console.log('✅ Статус закрепления изменён');
     }
 }
 
-// ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ (продолжение) ==========
+// ========== АВТОРИЗАЦИЯ ПОЛЬЗОВАТЕЛЕЙ ==========
 function registerUser(username, password) {
+    console.log('📝 Регистрация пользователя:', username);
+    
     if (!username || username.length < 3) {
         return { success: false, message: 'Имя пользователя должно быть не менее 3 символов!' };
     }
@@ -276,6 +332,7 @@ function registerUser(username, password) {
         return { success: false, message: 'Имя пользователя может содержать только латиницу, цифры и подчёркивание!' };
     }
     
+    // Проверка на бан
     const ban = isUserBanned(username);
     if (ban) {
         const untilText = ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда';
@@ -303,10 +360,14 @@ function registerUser(username, password) {
     users.push(newUser);
     saveUsers(users);
     
+    console.log('✅ Пользователь зарегистрирован:', newUser);
     return { success: true, cookie: cookie, message: 'Регистрация успешна!' };
 }
 
 function loginUser(username, password) {
+    console.log('🔐 Попытка входа по паролю:', username);
+    
+    // Проверка на бан
     const ban = isUserBanned(username);
     if (ban) {
         const untilText = ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда';
@@ -318,22 +379,36 @@ function loginUser(username, password) {
     const user = users.find(u => u.username === username && u.password === passwordHash);
     
     if (user) {
+        console.log('✅ Вход успешен для:', username);
         return { success: true, username: user.username, role: user.role, cookie: user.cookie };
     }
+    
+    console.log('❌ Неверный пароль для:', username);
     return { success: false, message: 'Неверное имя пользователя или пароль!' };
 }
 
 function loginByCookie(cookie) {
+    console.log('🔐 Попытка входа по Cookie:', cookie);
+    
     const users = getUsers();
+    console.log('📋 Всего пользователей:', users.length);
+    
     const user = users.find(u => u.cookie === cookie);
     
     if (user) {
+        console.log('✅ Пользователь найден:', user.username);
+        
         const ban = isUserBanned(user.username);
         if (ban) {
+            console.log('❌ Пользователь забанен');
             return { success: false, message: `Аккаунт забанен` };
         }
+        
+        console.log('✅ Вход по Cookie успешен');
         return { success: true, username: user.username, role: user.role, cookie: user.cookie };
     }
+    
+    console.log('❌ Пользователь с таким Cookie не найден');
     return { success: false };
 }
 
@@ -349,35 +424,48 @@ function getCurrentUser() {
 
 function saveCurrentUser(user) {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    console.log('💾 Текущий пользователь сохранён:', user.username);
 }
 
 function clearCurrentUser() {
     localStorage.removeItem(CURRENT_USER_KEY);
+    console.log('👤 Текущий пользователь очищен');
 }
 
 function logout() {
+    console.log('🚪 Выход из аккаунта');
     clearCurrentUser();
     window.location.href = '/robloexauth/login.html';
 }
 
 function checkAuth() {
+    console.log('🔍 Проверка авторизации...');
+    
     const user = getCurrentUser();
     if (user && user.cookie) {
+        console.log('Найден сохранённый пользователь:', user.username);
+        
         const verified = loginByCookie(user.cookie);
         if (verified.success) {
+            console.log('✅ Авторизация подтверждена');
             return verified;
         } else {
+            console.log('❌ Cookie недействителен, очищаем');
             clearCurrentUser();
             return null;
         }
     }
+    
+    console.log('❌ Пользователь не авторизован');
     return null;
 }
 
 // ========== АДМИН-ФУНКЦИИ ==========
 function isAdmin() {
     const user = getCurrentUser();
-    return user && ADMIN_USERNAMES.includes(user.username);
+    const isAdminUser = user && ADMIN_USERNAMES.includes(user.username);
+    console.log('👑 Проверка прав администратора:', isAdminUser);
+    return isAdminUser;
 }
 
 function getAllUsers() {
@@ -385,32 +473,48 @@ function getAllUsers() {
 }
 
 function deleteUser(username) {
+    console.log('🗑 Удаление пользователя:', username);
+    
     if (ADMIN_USERNAMES.includes(username)) {
+        console.log('❌ Нельзя удалить системного администратора');
         return false;
     }
+    
     let users = getUsers();
     users = users.filter(u => u.username !== username);
     saveUsers(users);
     deleteSkin(username);
+    
+    console.log('✅ Пользователь удалён');
     return true;
 }
 
 function changeUserRole(username, newRole) {
+    console.log('🔄 Изменение роли пользователя:', username, 'на', newRole);
+    
     const users = getUsers();
     const user = users.find(u => u.username === username);
+    
     if (user && !ADMIN_USERNAMES.includes(username)) {
         user.role = newRole;
         saveUsers(users);
+        console.log('✅ Роль изменена');
         return true;
     }
+    
+    console.log('❌ Нельзя изменить роль системного администратора');
     return false;
 }
 
 // ========== РАБОТА СО СКИНАМИ ==========
 function saveSkin(username, skinDataUrl) {
+    console.log('🎨 Сохранение скина для:', username);
+    
     const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
     skins[username] = skinDataUrl;
     localStorage.setItem(SKINS_STORAGE_KEY, JSON.stringify(skins));
+    
+    console.log('✅ Скин сохранён');
 }
 
 function getSkin(username) {
@@ -419,9 +523,13 @@ function getSkin(username) {
 }
 
 function deleteSkin(username) {
+    console.log('🗑 Удаление скина для:', username);
+    
     const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
     delete skins[username];
     localStorage.setItem(SKINS_STORAGE_KEY, JSON.stringify(skins));
+    
+    console.log('✅ Скин удалён');
 }
 
 function uploadSkin(file, callback) {
@@ -447,6 +555,53 @@ function uploadSkin(file, callback) {
     reader.readAsDataURL(file);
 }
 
+// ========== ОТЛАДОЧНЫЕ ФУНКЦИИ ==========
+function debugPrintUsers() {
+    const users = getUsers();
+    console.log('📋 Список пользователей:');
+    users.forEach((u, i) => {
+        console.log(`  ${i + 1}. ${u.username} (${u.role}) - Cookie: ${u.cookie ? u.cookie.substring(0, 20) + '...' : 'Нет'}`);
+    });
+}
+
+function debugPrintRequests() {
+    const requests = getRequests();
+    console.log('📋 Список заявок:');
+    requests.forEach((r, i) => {
+        console.log(`  ${i + 1}. ${r.username} - статус: ${r.status}`);
+    });
+}
+
+function debugPrintBans() {
+    const bans = getBans();
+    console.log('📋 Список банов:');
+    bans.forEach((b, i) => {
+        console.log(`  ${i + 1}. ${b.username} - до: ${b.until || 'навсегда'} - причина: ${b.reason}`);
+    });
+}
+
+function debugPrintNews() {
+    const news = getNews();
+    console.log('📋 Список новостей:');
+    news.forEach((n, i) => {
+        console.log(`  ${i + 1}. ${n.title} - закреплена: ${n.pinned}`);
+    });
+}
+
+function debugClearAllData() {
+    if (confirm('⚠️ Это удалит ВСЕХ пользователей, заявки, баны и новости! Продолжить?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(REQUESTS_KEY);
+        localStorage.removeItem(BANS_KEY);
+        localStorage.removeItem(NEWS_KEY);
+        localStorage.removeItem(CURRENT_USER_KEY);
+        localStorage.removeItem(SKINS_STORAGE_KEY);
+        console.log('✅ Все данные очищены');
+        showToast('Все данные очищены! Перезагрузите страницу.', 'success');
+        setTimeout(() => window.location.reload(), 1500);
+    }
+}
+
 // ========== ПЕРЕНАПРАВЛЕНИЯ ==========
 function redirectToLogin() {
     window.location.href = '/robloexauth/login.html';
@@ -464,23 +619,6 @@ function redirectToAdmin() {
     window.location.href = '/robloexauth/admin.html';
 }
 
-// ========== ОТЛАДКА ==========
-function debugPrintUsers() {
-    const users = getUsers();
-    console.log('📋 Список пользователей:');
-    users.forEach((u, i) => {
-        console.log(`  ${i + 1}. ${u.username} (${u.role}) - создан: ${u.created}`);
-    });
-    
-    const requests = getRequests();
-    console.log('📋 Список заявок:');
-    requests.forEach((r, i) => {
-        console.log(`  ${i + 1}. ${r.username} - статус: ${r.status}`);
-    });
-    
-    const bans = getBans();
-    console.log('📋 Список банов:');
-    bans.forEach((b, i) => {
-        console.log(`  ${i + 1}. ${b.username} - до: ${b.until || 'навсегда'} - причина: ${b.reason}`);
-    });
-}
+// ========== ИНИЦИАЛИЗАЦИЯ ДЛЯ ОТЛАДКИ ==========
+console.log('📦 auth.js загружен');
+console.log('👥 Список администраторов:', ADMIN_USERNAMES);
