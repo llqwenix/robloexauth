@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robloex Launcher - Профиль</title>
+    <title>Robloex - Профиль</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,18 +11,12 @@
         <nav class="navbar">
             <div class="logo">ROBLOEX</div>
             <div class="nav-links">
-                <a href="/robloexauth/home.html">ГЛАВНАЯ</a>
-                <a href="/robloexauth/dashboard.html" class="active">ПРОФИЛЬ</a>
+                <a href="home.html">ГЛАВНАЯ</a>
+                <a href="dashboard.html" class="active">ПРОФИЛЬ</a>
             </div>
-            <div id="userInfo">
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">U</div>
-                    <span id="userName">User</span>
-                    <button class="logout-btn" onclick="logout()">ВЫХОД</button>
-                </div>
-            </div>
+            <div id="userInfo"></div>
         </nav>
-
+        
         <div class="glass-card">
             <div class="card-header">👤 МОЙ ПРОФИЛЬ</div>
             <div class="dashboard-grid">
@@ -30,14 +24,15 @@
                     <h4>ИНФОРМАЦИЯ</h4>
                     <p><strong>Имя:</strong> <span id="profileUsername">-</span></p>
                     <p><strong>Роль:</strong> <span id="profileRole">Пользователь</span></p>
-                    <p><strong>ID аккаунта:</strong> <span id="profileId">-</span></p>
+                    <p><strong>Дата регистрации:</strong> <span id="profileCreated">-</span></p>
                 </div>
                 <div class="info-card">
                     <h4>🎨 СКИН ПЕРСОНАЖА</h4>
                     <div class="skin-preview-container">
                         <img id="skinPreview" class="skin-preview" alt="Превью скина">
                         <button class="btn-secondary" onclick="document.getElementById('skinFile').click()">📁 ВЫБРАТЬ ФАЙЛ</button>
-                        <input type="file" id="skinFile" accept="image/png" style="display: none;" onchange="uploadSkin(this.files[0])">
+                        <button class="btn-secondary btn-danger" onclick="removeSkin()" style="margin-top: 10px;">🗑 УДАЛИТЬ СКИН</button>
+                        <input type="file" id="skinFile" accept="image/png" style="display: none;" onchange="handleSkinUpload(this.files[0])">
                         <p class="skin-hint">Поддерживаются PNG, размер 64x64 или 64x32 пикселей</p>
                     </div>
                 </div>
@@ -52,71 +47,15 @@
             </div>
         </div>
         
-        <div id="toast" class="toast"></div>
         <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
     </div>
+    
+    <div id="toast" class="toast"></div>
+    
     <script src="auth.js"></script>
     <script>
-        let currentUser = null;
+        let currentUserData = null;
         
-        async function loadDashboard() {
-            const user = await checkAuth();
+        function loadDashboard() {
+            const user = checkAuth();
             if (!user) {
-                redirectToLogin();
-                return;
-            }
-            currentUser = user;
-            
-            document.getElementById('userName').textContent = user.username;
-            document.getElementById('userAvatar').textContent = user.username[0].toUpperCase();
-            document.getElementById('profileUsername').textContent = user.username;
-            document.getElementById('profileRole').textContent = user.role === 'admin' ? 'Администратор' : 'Пользователь';
-            document.getElementById('profileId').textContent = user.cookie ? user.cookie.substring(0, 16) + '...' : '-';
-            document.getElementById('userCookie').value = user.cookie || 'Нет cookie';
-            
-            // Загружаем скин из localStorage
-            const savedSkin = getSkinFromLocalStorage(user.username);
-            if (savedSkin) {
-                const previewImg = document.getElementById('skinPreview');
-                previewImg.src = savedSkin;
-                previewImg.style.display = 'block';
-            }
-        }
-        
-        function uploadSkin(file) {
-            if (!file) return;
-            if (!file.type.match('image/png')) {
-                showToast('Пожалуйста, выберите PNG файл!', true);
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    if ((img.width === 64 && img.height === 64) || (img.width === 64 && img.height === 32)) {
-                        applySkinPreview(file);
-                    } else {
-                        showToast('Неверный размер! Поддерживаются 64x64 или 64x32 пикселей.', true);
-                    }
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        function copyCookie() {
-            const cookieInput = document.getElementById('userCookie');
-            cookieInput.select();
-            document.execCommand('copy');
-            showToast('Cookie скопирован!');
-        }
-        
-        function logout() {
-            clearSession();
-            redirectToLogin();
-        }
-        
-        loadDashboard();
-    </script>
-</body>
-</html>
