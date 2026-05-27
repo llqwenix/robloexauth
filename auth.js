@@ -377,7 +377,6 @@ function checkAuth() {
 // ========== АДМИН-ФУНКЦИИ ==========
 function isAdmin() {
     const user = getCurrentUser();
-    // Проверяем, есть ли пользователь в списке администраторов
     return user && ADMIN_USERNAMES.includes(user.username);
 }
 
@@ -386,7 +385,6 @@ function getAllUsers() {
 }
 
 function deleteUser(username) {
-    // Нельзя удалять администраторов
     if (ADMIN_USERNAMES.includes(username)) {
         return false;
     }
@@ -400,7 +398,6 @@ function deleteUser(username) {
 function changeUserRole(username, newRole) {
     const users = getUsers();
     const user = users.find(u => u.username === username);
-    // Нельзя изменять роль администраторов
     if (user && !ADMIN_USERNAMES.includes(username)) {
         user.role = newRole;
         saveUsers(users);
