@@ -2,10 +2,40 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=/robloexauth/home.html">
+    <meta http-equiv="refresh" content="0; url=home.html">
     <title>Robloex Launcher</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0f0a 0%, #0a2e0a 50%, #0a0f0a 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        .loader {
+            text-align: center;
+            color: #00ff88;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 255, 136, 0.3);
+            border-top-color: #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <p>Перенаправление на <a href="/robloexauth/home.html">главную страницу</a>...</p>
+    <div class="loader">
+        <div class="spinner"></div>
+        <p>Перенаправление...</p>
+        <p><a href="home.html" style="color: #00ff88;">Нажмите здесь</a>, если не происходит автоматического перенаправления</p>
+    </div>
 </body>
 </html>
