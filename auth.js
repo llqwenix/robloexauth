@@ -2,10 +2,13 @@
 
 // Настройки
 const STORAGE_KEY = 'robloex_users';
+const REQUESTS_KEY = 'robloex_requests';
+const BANS_KEY = 'robloex_bans';
+const NEWS_KEY = 'robloex_news';
 const CURRENT_USER_KEY = 'robloex_current_user';
 const SKINS_STORAGE_KEY = 'robloex_skins';
 
-// Вспомогательные функции
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
     if (toast) {
@@ -34,18 +37,14 @@ function generateCookie() {
     return [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 }
 
-// Работа с пользователями
+// ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ==========
 function getUsers() {
     const users = localStorage.getItem(STORAGE_KEY);
-    if (!users) {
-        // Инициализируем пустым массивом, если нет данных
-        return [];
-    }
+    if (!users) return [];
     try {
         const parsed = JSON.parse(users);
         return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-        console.error('Ошибка парсинга users:', e);
         return [];
     }
 }
@@ -54,18 +53,219 @@ function saveUsers(users) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
 }
 
-// Функция для очистки всех пользователей (на случай ошибок)
-function clearAllUsers() {
-    if (confirm('⚠️ Это удалит ВСЕХ пользователей! Продолжить?')) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-        localStorage.removeItem(CURRENT_USER_KEY);
-        showToast('Все пользователи удалены', 'success');
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
+// ========== РАБОТА С ЗАЯВКАМИ ==========
+function getRequests() {
+    const requests = localStorage.getItem(REQUESTS_KEY);
+    if (!requests) return [];
+    try {
+        const parsed = JSON.parse(requests);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
     }
 }
 
+function saveRequests(requests) {
+    localStorage.setItem(REQUESTS_KEY, JSON.stringify(requests));
+}
+
+function createRequest(username, password) {
+    const requests = getRequests();
+    
+    // Проверяем, нет ли уже заявки от этого пользователя
+    if (requests.some(r => r.username === username)) {
+        return { success: false, message: 'Заявка от этого пользователя уже существует!' };
+    }
+    
+    const newRequest = {
+        id: Date.now(),
+        username: username,
+        password: hashPassword(password),
+        status: 'pending', // pending, approved, denied
+        createdAt: new Date().toISOString(),
+        reviewedBy: null,
+        reviewedAt: null
+    };
+    
+    requests.push(newRequest);
+    saveRequests(requests);
+    return { success: true, message: 'Заявка отправлена на рассмотрение!' };
+}
+
+function approveRequest(requestId, adminName) {
+    const requests = getRequests();
+    const requestIndex = requests.findIndex(r => r.id === requestId);
+    
+    if (requestIndex === -1) return false;
+    
+    const request = requests[requestIndex];
+    if (request.status !== 'pending') return false;
+    
+    // Создаём пользователя
+    const users = getUsers();
+    const cookie = generateCookie();
+    
+    const newUser = {
+        username: request.username,
+        password: request.password,
+        cookie: cookie,
+        role: 'user',
+        created: new Date().toISOString(),
+        isBanned: false,
+        banUntil: null
+    };
+    
+    users.push(newUser);
+    saveUsers(users);
+    
+    // Обновляем статус заявки
+    request.status = 'approved';
+    request.reviewedBy = adminName;
+    request.reviewedAt = new Date().toISOString();
+    requests[requestIndex] = request;
+    saveRequests(requests);
+    
+    return true;
+}
+
+function denyRequest(requestId, adminName) {
+    const requests = getRequests();
+    const requestIndex = requests.findIndex(r => r.id === requestId);
+    
+    if (requestIndex === -1) return false;
+    
+    requests[requestIndex].status = 'denied';
+    requests[requestIndex].reviewedBy = adminName;
+    requests[requestIndex].reviewedAt = new Date().toISOString();
+    saveRequests(requests);
+    
+    return true;
+}
+
+// ========== РАБОТА С БАНАМИ ==========
+function getBans() {
+    const bans = localStorage.getItem(BANS_KEY);
+    if (!bans) return [];
+    try {
+        return JSON.parse(bans);
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveBans(bans) {
+    localStorage.setItem(BANS_KEY, JSON.stringify(bans));
+}
+
+function isUserBanned(username) {
+    const bans = getBans();
+    const activeBan = bans.find(b => b.username === username && (!b.until || new Date(b.until) > new Date()));
+    return activeBan || null;
+}
+
+function banUser(username, reason, durationHours, adminName) {
+    const bans = getBans();
+    
+    // Удаляем старые активные баны
+    const filteredBans = bans.filter(b => b.username !== username);
+    
+    const until = durationHours ? new Date(Date.now() + durationHours * 3600000).toISOString() : null;
+    
+    filteredBans.push({
+        username: username,
+        reason: reason,
+        until: until,
+        createdBy: adminName,
+        createdAt: new Date().toISOString()
+    });
+    
+    saveBans(filteredBans);
+    
+    // Если пользователь сейчас залогинен, разлогиниваем его
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.username === username) {
+        clearCurrentUser();
+    }
+    
+    return true;
+}
+
+function unbanUser(username) {
+    const bans = getBans();
+    const filteredBans = bans.filter(b => b.username !== username);
+    saveBans(filteredBans);
+    return true;
+}
+
+// ========== РАБОТА С НОВОСТЯМИ ==========
+function getNews() {
+    const news = localStorage.getItem(NEWS_KEY);
+    if (!news) {
+        // Новости по умолчанию
+        const defaultNews = [
+            {
+                id: 1,
+                title: 'Добро пожаловать в Robloex Launcher!',
+                content: 'Мы рады приветствовать вас в нашем лаунчере. Здесь вы найдёте лучшие версии Minecraft, поддержку модов и многое другое!',
+                image: '🎉',
+                date: new Date().toISOString(),
+                pinned: true
+            },
+            {
+                id: 2,
+                title: 'Как начать играть?',
+                content: '1. Зарегистрируйтесь и получите Cookie\n2. Скачайте лаунчер\n3. Введите Cookie в лаунчере\n4. Выберите версию и играйте!',
+                image: '📖',
+                date: new Date(Date.now() - 86400000).toISOString(),
+                pinned: false
+            }
+        ];
+        saveNews(defaultNews);
+        return defaultNews;
+    }
+    try {
+        return JSON.parse(news);
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveNews(news) {
+    localStorage.setItem(NEWS_KEY, JSON.stringify(news));
+}
+
+function addNews(title, content, image = '📰', isPinned = false) {
+    const news = getNews();
+    const newNews = {
+        id: Date.now(),
+        title: title,
+        content: content,
+        image: image,
+        date: new Date().toISOString(),
+        pinned: isPinned
+    };
+    news.unshift(newNews);
+    saveNews(news);
+    return newNews;
+}
+
+function deleteNews(newsId) {
+    const news = getNews();
+    const filtered = news.filter(n => n.id !== newsId);
+    saveNews(filtered);
+    return true;
+}
+
+function updateNewsPinned(newsId, isPinned) {
+    const news = getNews();
+    const newsItem = news.find(n => n.id === newsId);
+    if (newsItem) {
+        newsItem.pinned = isPinned;
+        saveNews(news);
+    }
+}
+
+// ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ (продолжение) ==========
 function registerUser(username, password) {
     // Валидация
     if (!username || username.length < 3) {
@@ -81,9 +281,14 @@ function registerUser(username, password) {
         return { success: false, message: 'Имя пользователя может содержать только латиницу, цифры и подчёркивание!' };
     }
     
-    const users = getUsers();
+    // Проверка на бан
+    const ban = isUserBanned(username);
+    if (ban) {
+        const untilText = ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда';
+        return { success: false, message: `Ваш аккаунт забанен${untilText}. Причина: ${ban.reason}` };
+    }
     
-    // Проверка на существование пользователя (точное совпадение по username)
+    const users = getUsers();
     const userExists = users.some(u => u.username && u.username.toLowerCase() === username.toLowerCase());
     
     if (userExists) {
@@ -96,24 +301,27 @@ function registerUser(username, password) {
         password: hashPassword(password),
         cookie: cookie,
         role: 'user',
-        created: new Date().toISOString()
+        created: new Date().toISOString(),
+        isBanned: false,
+        banUntil: null
     };
     
     users.push(newUser);
     saveUsers(users);
     
-    // Логируем для отладки
-    console.log('✅ Новый пользователь создан:', username);
-    console.log('📊 Всего пользователей:', users.length);
-    
     return { success: true, cookie: cookie, message: 'Регистрация успешна!' };
 }
 
 function loginUser(username, password) {
+    // Проверка на бан
+    const ban = isUserBanned(username);
+    if (ban) {
+        const untilText = ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда';
+        return { success: false, message: `Ваш аккаунт забанен${untilText}. Причина: ${ban.reason}` };
+    }
+    
     const users = getUsers();
     const passwordHash = hashPassword(password);
-    
-    // Ищем пользователя по username и паролю
     const user = users.find(u => u.username === username && u.password === passwordHash);
     
     if (user) {
@@ -127,6 +335,11 @@ function loginByCookie(cookie) {
     const user = users.find(u => u.cookie === cookie);
     
     if (user) {
+        // Проверка на бан
+        const ban = isUserBanned(user.username);
+        if (ban) {
+            return { success: false, message: `Аккаунт забанен` };
+        }
         return { success: true, username: user.username, role: user.role, cookie: user.cookie };
     }
     return { success: false };
@@ -169,7 +382,39 @@ function checkAuth() {
     return null;
 }
 
-// Работа со скинами
+// ========== АДМИН-ФУНКЦИИ ==========
+function isAdmin() {
+    const user = getCurrentUser();
+    return user && user.role === 'admin';
+}
+
+function getAllUsers() {
+    return getUsers();
+}
+
+function deleteUser(username) {
+    let users = getUsers();
+    users = users.filter(u => u.username !== username);
+    saveUsers(users);
+    
+    // Также удаляем скин
+    deleteSkin(username);
+    
+    return true;
+}
+
+function changeUserRole(username, newRole) {
+    const users = getUsers();
+    const user = users.find(u => u.username === username);
+    if (user) {
+        user.role = newRole;
+        saveUsers(users);
+        return true;
+    }
+    return false;
+}
+
+// ========== РАБОТА СО СКИНАМИ ==========
 function saveSkin(username, skinDataUrl) {
     const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
     skins[username] = skinDataUrl;
@@ -210,7 +455,7 @@ function uploadSkin(file, callback) {
     reader.readAsDataURL(file);
 }
 
-// Перенаправления
+// ========== ПЕРЕНАПРАВЛЕНИЯ ==========
 function redirectToLogin() {
     window.location.href = '/robloexauth/login.html';
 }
@@ -223,11 +468,27 @@ function redirectToDashboard() {
     window.location.href = '/robloexauth/dashboard.html';
 }
 
-// Функция для отладки (вывести всех пользователей в консоль)
+function redirectToAdmin() {
+    window.location.href = '/robloexauth/admin.html';
+}
+
+// ========== ОТЛАДКА ==========
 function debugPrintUsers() {
     const users = getUsers();
     console.log('📋 Список пользователей:');
     users.forEach((u, i) => {
         console.log(`  ${i + 1}. ${u.username} (${u.role}) - создан: ${u.created}`);
+    });
+    
+    const requests = getRequests();
+    console.log('📋 Список заявок:');
+    requests.forEach((r, i) => {
+        console.log(`  ${i + 1}. ${r.username} - статус: ${r.status}`);
+    });
+    
+    const bans = getBans();
+    console.log('📋 Список банов:');
+    bans.forEach((b, i) => {
+        console.log(`  ${i + 1}. ${b.username} - до: ${b.until || 'навсегда'} - причина: ${b.reason}`);
     });
 }
