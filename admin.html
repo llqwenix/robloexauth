@@ -254,8 +254,8 @@
                         <p><strong>👤 ${escapeHtml(req.username)}</strong></p>
                         <p>📅 ${new Date(req.createdAt).toLocaleString()}</p>
                         <div style="margin-top: 10px;">
-                            <button class="btn-approve" onclick="approveRequest(${req.id})">✅ ОДОБРИТЬ</button>
-                            <button class="btn-deny" onclick="denyRequest(${req.id})">❌ ОТКЛОНИТЬ</button>
+                            <button class="btn-approve" onclick="handleApproveRequest(${req.id})">✅ ОДОБРИТЬ</button>
+                            <button class="btn-deny" onclick="handleDenyRequest(${req.id})">❌ ОТКЛОНИТЬ</button>
                         </div>
                     </div>
                 `).join('');
@@ -275,23 +275,67 @@
             }
         }
         
-        function approveRequest(requestId) {
-            if (approveRequest(requestId, currentAdmin.username)) {
-                showToast('Заявка одобрена! Пользователь создан.', 'success');
-                loadRequests();
-                loadUsers();
-            } else {
-                showToast('Ошибка при одобрении заявки', 'error');
+        function handleApproveRequest(requestId) {
+            console.log('✅ Одобрение заявки:', requestId);
+            
+            const requests = getRequests();
+            const request = requests.find(r => r.id === requestId);
+            
+            if (!request) {
+                showToast('Заявка не найдена!', 'error');
+                return;
             }
+            
+            if (request.status !== 'pending') {
+                showToast('Заявка уже обработана!', 'error');
+                return;
+            }
+            
+            // Создаём пользователя
+            const users = getUsers();
+            const cookie = generateCookie();
+            
+            const newUser = {
+                username: request.username,
+                password: request.password,
+                cookie: cookie,
+                role: 'user',
+                created: new Date().toISOString()
+            };
+            
+            users.push(newUser);
+            saveUsers(users);
+            console.log('✅ Пользователь создан:', newUser);
+            
+            // Обновляем статус заявки
+            request.status = 'approved';
+            request.reviewedBy = currentAdmin.username;
+            request.reviewedAt = new Date().toISOString();
+            saveRequests(requests);
+            
+            showToast(`Пользователь ${request.username} создан! Cookie: ${cookie}`, 'success');
+            loadRequests();
+            loadUsers();
         }
         
-        function denyRequest(requestId) {
-            if (denyRequest(requestId, currentAdmin.username)) {
-                showToast('Заявка отклонена', 'success');
-                loadRequests();
-            } else {
-                showToast('Ошибка при отклонении заявки', 'error');
+        function handleDenyRequest(requestId) {
+            console.log('❌ Отклонение заявки:', requestId);
+            
+            const requests = getRequests();
+            const request = requests.find(r => r.id === requestId);
+            
+            if (!request) {
+                showToast('Заявка не найдена!', 'error');
+                return;
             }
+            
+            request.status = 'denied';
+            request.reviewedBy = currentAdmin.username;
+            request.reviewedAt = new Date().toISOString();
+            saveRequests(requests);
+            
+            showToast(`Заявка ${request.username} отклонена`, 'success');
+            loadRequests();
         }
         
         function loadUsers() {
@@ -331,7 +375,9 @@
             if (ADMIN_USERNAMES.includes(username)) {
                 showToast('Нельзя изменить роль системного администратора!', 'error');
                 const user = getAllUsers().find(u => u.username === username);
-                document.getElementById(`role-${username}`).value = user.role;
+                if (document.getElementById(`role-${username}`)) {
+                    document.getElementById(`role-${username}`).value = user.role;
+                }
                 return;
             }
             if (changeUserRole(username, newRole)) {
