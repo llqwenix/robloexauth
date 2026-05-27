@@ -155,10 +155,14 @@
         let currentUserData = null;
         
         async function loadDashboard() {
+            console.log('Загрузка dashboard.html, проверка авторизации...');
+            
             // Проверяем авторизацию
             const user = checkAuth();
+            console.log('Пользователь:', user);
             
             if (!user) {
+                console.log('Пользователь не авторизован, перенаправление на login.html');
                 redirectToLogin();
                 return;
             }
@@ -168,6 +172,8 @@
             // Обновляем навбар
             const userInfo = document.getElementById('userInfo');
             const isAdminUser = ADMIN_USERNAMES.includes(user.username);
+            console.log('Является ли пользователь администратором?', isAdminUser);
+            
             userInfo.innerHTML = `
                 <div class="user-info">
                     <div class="user-avatar">${user.username[0].toUpperCase()}</div>
@@ -178,8 +184,11 @@
             
             // Показываем ссылку на админ-панель только для администраторов
             const navLinks = document.getElementById('navLinks');
+            const existingAdminLink = document.querySelector('.admin-link');
+            
             if (isAdminUser) {
-                if (!document.querySelector('.admin-link')) {
+                if (!existingAdminLink) {
+                    console.log('Добавляем ссылку на админ-панель');
                     const adminLink = document.createElement('a');
                     adminLink.href = 'admin.html';
                     adminLink.textContent = 'АДМИН-ПАНЕЛЬ';
@@ -187,8 +196,8 @@
                     navLinks.appendChild(adminLink);
                 }
             } else {
-                const existingAdminLink = document.querySelector('.admin-link');
                 if (existingAdminLink) {
+                    console.log('Удаляем ссылку на админ-панель');
                     existingAdminLink.remove();
                 }
             }
