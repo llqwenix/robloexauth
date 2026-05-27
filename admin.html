@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robloex - Админ-панель</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+            padding-bottom: 10px;
+        }
+        .tab-btn {
+            background: transparent;
+            border: 1px solid #00aa44;
+            padding: 8px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: #0a4d0a;
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+        .tab-btn:hover {
+            background: rgba(0, 170, 68, 0.2);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .request-card, .user-card {
+            background: rgba(0, 20, 0, 0.6);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            transition: all 0.3s;
+        }
+        .request-card:hover, .user-card:hover {
+            border-color: #00ff88;
+        }
+        .badge-pending { color: #f39c12; }
+        .badge-approved { color: #2ecc71; }
+        .badge-denied { color: #e74c3c; }
+        .btn-approve { background: #2ecc71; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; }
+        .btn-deny { background: #e74c3c; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
+        .btn-ban { background: #e74c3c; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
+        .btn-unban { background: #2ecc71; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
+        .btn-delete { background: #c0392b; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
+        .news-item {
+            background: rgba(0, 20, 0, 0.6);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+        }
+        .news-pinned {
+            border-left: 4px solid #f39c12;
+        }
+        .ban-duration {
+            width: 80px;
+            padding: 5px;
+            margin-right: 10px;
+        }
+        .ban-reason {
+            width: 150px;
+            padding: 5px;
+            margin-right: 10px;
+        }
+        .inline-form {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="logo">ROBLOEX ADMIN</div>
+            <div class="nav-links">
+                <a href="home.html">ГЛАВНАЯ</a>
+                <a href="dashboard.html">ПРОФИЛЬ</a>
+                <a href="admin.html" class="active">АДМИН-ПАНЕЛЬ</a>
+            </div>
+            <div id="userInfo"></div>
+        </nav>
+        
+        <div class="glass-card">
+            <div class="card-header">👑 АДМИН-ПАНЕЛЬ</div>
+            
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="showTab('requests')">📋 ЗАЯВКИ</button>
+                <button class="tab-btn" onclick="showTab('users')">👥 ПОЛЬЗОВАТЕЛИ</button>
+                <button class="tab-btn" onclick="showTab('bans')">🚫 БАНЫ</button>
+                <button class="tab-btn" onclick="showTab('news')">📰 НОВОСТИ</button>
+            </div>
+            
+            <!-- Вкладка Заявки -->
+            <div id="requestsTab" class="tab-content active">
+                <h3 style="color: #00ff88; margin-bottom: 15px;">Новые заявки</h3>
+                <div id="pendingRequestsList"></div>
+                <h3 style="color: #00ff88; margin-top: 30px; margin-bottom: 15px;">Обработанные заявки</h3>
+                <div id="processedRequestsList"></div>
+            </div>
+            
+            <!-- Вкладка Пользователи -->
+            <div id="usersTab" class="tab-content">
+                <div class="form-group">
+                    <input type="text" id="searchUser" placeholder="Поиск пользователя..." onkeyup="filterUsers()">
+                </div>
+                <div id="usersList"></div>
+            </div>
+            
+            <!-- Вкладка Баны -->
+            <div id="bansTab" class="tab-content">
+                <div class="info-card" style="margin-bottom: 20px;">
+                    <h4>➕ ЗАБАНИТЬ ПОЛЬЗОВАТЕЛЯ</h4>
+                    <div class="inline-form">
+                        <input type="text" id="banUsername" placeholder="Имя пользователя" style="width: 150px;">
+                        <input type="text" id="banReason" placeholder="Причина" style="width: 150px;">
+                        <select id="banDuration" class="ban-duration">
+                            <option value="0">Навсегда</option>
+                            <option value="1">1 час</option>
+                            <option value="6">6 часов</option>
+                            <option value="24">1 день</option>
+                            <option value="168">7 дней</option>
+                            <option value="720">30 дней</option>
+                        </select>
+                        <button class="btn-ban" onclick="banUserFromUI()">ЗАБАНИТЬ</button>
+                    </div>
+                </div>
+                <h3 style="color: #00ff88; margin-bottom: 15px;">Активные баны</h3>
+                <div id="activeBansList"></div>
+            </div>
+            
+            <!-- Вкладка Новости -->
+            <div id="newsTab" class="tab-content">
+                <div class="info-card" style="margin-bottom: 20px;">
+                    <h4>➕ ДОБАВИТЬ НОВОСТЬ</h4>
+                    <div class="form-group">
+                        <input type="text" id="newsTitle" placeholder="Заголовок">
+                    </div>
+                    <div class="form-group">
+                        <textarea id="newsContent" rows="4" placeholder="Текст новости..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="newsImage" placeholder="Эмодзи (например, 🎉)">
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="newsPinned"> Закрепить новость</label>
+                    </div>
+                    <button class="btn-primary" onclick="addNewsFromUI()" style="width: auto; padding: 10px 20px;">➕ ОПУБЛИКОВАТЬ</button>
+                </div>
+                <h3 style="color: #00ff88; margin-bottom: 15px;">Все новости</h3>
+                <div id="newsList"></div>
+            </div>
+        </div>
+        
+        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+    
+    <script src="auth.js"></script>
+    <script>
+        let currentAdmin = null;
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'requests') loadRequests();
+            if (tabName === 'users') loadUsers();
+            if (tabName === 'bans') loadBans();
+            if (tabName === 'news') loadNews();
+        }
+        
+        function loadAdminPanel() {
+            const user = checkAuth();
+            if (!user || user.role !== 'admin') {
+                showToast('Доступ запрещён! Только для администраторов.', 'error');
+                setTimeout(() => redirectToHome(), 1500);
+                return;
+            }
+            
+            currentAdmin = user;
+            
+            const userInfo = document.getElementById('userInfo');
+            userInfo.innerHTML = `
+                <div class="user-info">
+                    <div class="user-avatar">${user.username[0].toUpperCase()}</div>
+                    <span>${user.username} (ADMIN)</span>
+                    <button class="logout-btn" onclick="logout()">ВЫХОД</button>
+                </div>
+            `;
+            
+            loadRequests();
+        }
+        
+        function loadRequests() {
+            const requests = getRequests();
+            const pending = requests.filter(r => r.status === 'pending');
+            const processed = requests.filter(r => r.status !== 'pending');
+            
+            const pendingContainer = document.getElementById('pendingRequestsList');
+            const processedContainer = document.getElementById('processedRequestsList');
+            
+            if (pending.length === 0) {
+                pendingContainer.innerHTML = '<p style="color: #00aa66;">Нет новых заявок</p>';
+            } else {
+                pendingContainer.innerHTML = pending.map(req => `
+                    <div class="request-card">
+                        <p><strong>👤 ${escapeHtml(req.username)}</strong></p>
+                        <p>📅 ${new Date(req.createdAt).toLocaleString()}</p>
+                        <div style="margin-top: 10px;">
+                            <button class="btn-approve" onclick="approveRequest(${req.id})">✅ ОДОБРИТЬ</button>
+                            <button class="btn-deny" onclick="denyRequest(${req.id})">❌ ОТКЛОНИТЬ</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            if (processed.length === 0) {
+                processedContainer.innerHTML = '<p style="color: #00aa66;">Нет обработанных заявок</p>';
+            } else {
+                processedContainer.innerHTML = processed.map(req => `
+                    <div class="request-card">
+                        <p><strong>👤 ${escapeHtml(req.username)}</strong></p>
+                        <p>📅 ${new Date(req.createdAt).toLocaleString()}</p>
+                        <p>Статус: <span class="badge-${req.status}">${req.status === 'approved' ? '✅ ОДОБРЕНА' : '❌ ОТКЛОНЕНА'}</span></p>
+                        <p>Рассмотрено: ${req.reviewedBy} - ${new Date(req.reviewedAt).toLocaleString()}</p>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function approveRequest(requestId) {
+            if (approveRequest(requestId, currentAdmin.username)) {
+                showToast('Заявка одобрена! Пользователь создан.', 'success');
+                loadRequests();
+                loadUsers();
+            } else {
+                showToast('Ошибка при одобрении заявки', 'error');
+            }
+        }
+        
+        function denyRequest(requestId) {
+            if (denyRequest(requestId, currentAdmin.username)) {
+                showToast('Заявка отклонена', 'success');
+                loadRequests();
+            } else {
+                showToast('Ошибка при отклонении заявки', 'error');
+            }
+        }
+        
+        function loadUsers() {
+            const users = getAllUsers();
+            const container = document.getElementById('usersList');
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p style="color: #00aa66;">Нет пользователей</p>';
+                return;
+            }
+            
+            container.innerHTML = users.map(user => {
+                const ban = isUserBanned(user.username);
+                return `
+                    <div class="user-card">
+                        <p><strong>👤 ${escapeHtml(user.username)}</strong></p>
+                        <p>Роль: ${user.role === 'admin' ? '👑 Администратор' : '👤 Пользователь'}</p>
+                        <p>📅 Создан: ${new Date(user.created).toLocaleDateString()}</p>
+                        ${ban ? `<p style="color: #e74c3c;">🚫 Забанен${ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда'}</p>` : ''}
+                        <div style="margin-top: 10px;">
+                            ${user.username !== 'admin' ? `
+                                <select id="role-${user.username}" onchange="changeRole('${user.username}', this.value)">
+                                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Пользователь</option>
+                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Администратор</option>
+                                </select>
+                                <button class="btn-delete" onclick="deleteUserAccount('${user.username}')">🗑 УДАЛИТЬ</button>
+                            ` : '<span style="color: #f39c12;">⭐ Администратор системы</span>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function changeRole(username, newRole) {
+            if (changeUserRole(username, newRole)) {
+                showToast(`Роль пользователя ${username} изменена`, 'success');
+                loadUsers();
+            } else {
+                showToast('Ошибка изменения роли', 'error');
+            }
+        }
+        
+        function deleteUserAccount(username) {
+            if (confirm(`Удалить пользователя ${username}?`)) {
+                if (deleteUser(username)) {
+                    showToast(`Пользователь ${username} удалён`, 'success');
+                    loadUsers();
+                    loadBans();
+                } else {
+                    showToast('Ошибка удаления', 'error');
+                }
+            }
+        }
+        
+        function filterUsers() {
+            const search = document.getElementById('searchUser').value.toLowerCase();
+            const cards = document.querySelectorAll('#usersList .user-card');
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(search) ? 'block' : 'none';
+            });
+        }
+        
+        function loadBans() {
+            const bans = getBans();
+            const activeBans = bans.filter(b => !b.until || new Date(b.until) > new Date());
+            const container = document.getElementById('activeBansList');
+            
+            if (activeBans.length === 0) {
+                container.innerHTML = '<p style="color: #00aa66;">Нет активных банов</p>';
+                return;
+            }
+            
+            container.innerHTML = activeBans.map(ban => `
+                <div class="user-card">
+                    <p><strong>👤 ${escapeHtml(ban.username)}</strong></p>
+                    <p>Причина: ${escapeHtml(ban.reason)}</p>
+                    <p>До: ${ban.until ? new Date(ban.until).toLocaleString() : 'Навсегда'}</p>
+                    <p>Забанил: ${ban.createdBy} - ${new Date(ban.createdAt).toLocaleString()}</p>
+                    <button class="btn-unban" onclick="unbanUserAccount('${ban.username}')">🔓 РАЗБАНИТЬ</button>
+                </div>
+            `).join('');
+        }
+        
+        function banUserFromUI() {
+            const username = document.getElementById('banUsername').value.trim();
+            const reason = document.getElementById('banReason').value.trim();
+            const duration = parseInt(document.getElementById('banDuration').value);
+            
+            if (!username || !reason) {
+                showToast('Введите имя пользователя и причину бана!', 'error');
+                return;
+            }
+            
+            if (banUser(username, reason, duration, currentAdmin.username)) {
+                showToast(`Пользователь ${username} забанен`, 'success');
+                document.getElementById('banUsername').value = '';
+                document.getElementById('banReason').value = '';
+                loadBans();
+                loadUsers();
+            } else {
+                showToast('Ошибка при бане', 'error');
+            }
+        }
+        
+        function unbanUserAccount(username) {
+            if (unbanUser(username)) {
+                showToast(`Пользователь ${username} разбанен`, 'success');
+                loadBans();
+                loadUsers();
+            } else {
+                showToast('Ошибка при разбане', 'error');
+            }
+        }
+        
+        function loadNews() {
+            const news = getNews();
+            const container = document.getElementById('newsList');
+            
+            if (news.length === 0) {
+                container.innerHTML = '<p style="color: #00aa66;">Нет новостей</p>';
+                return;
+            }
+            
+            container.innerHTML = news.map(item => `
+                <div class="news-item ${item.pinned ? 'news-pinned' : ''}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 style="color: #00ff88;">${item.image || '📰'} ${escapeHtml(item.title)} ${item.pinned ? '📌' : ''}</h4>
+                        <small>${new Date(item.date).toLocaleString()}</small>
+                    </div>
+                    <p style="margin-top: 10px; white-space: pre-wrap;">${escapeHtml(item.content)}</p>
+                    <div style="margin-top: 10px;">
+                        <button class="btn-approve" onclick="togglePinNews(${item.id}, ${!item.pinned})" style="background: #3498db;">${item.pinned ? '📌 ОТКРЕПИТЬ' : '📌 ЗАКРЕПИТЬ'}</button>
+                        <button class="btn-delete" onclick="deleteNewsItem(${item.id})">🗑 УДАЛИТЬ</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function addNewsFromUI() {
+            const title = document.getElementById('newsTitle').value.trim();
+            const content = document.getElementById('newsContent').value.trim();
+            const image = document.getElementById('newsImage').value.trim() || '📰';
+            const pinned = document.getElementById('newsPinned').checked;
+            
+            if (!title || !content) {
+                showToast('Введите заголовок и текст новости!', 'error');
+                return;
+            }
+            
+            addNews(title, content, image, pinned);
+            showToast('Новость добавлена!', 'success');
+            
+            document.getElementById('newsTitle').value = '';
+            document.getElementById('newsContent').value = '';
+            document.getElementById('newsImage').value = '';
+            document.getElementById('newsPinned').checked = false;
+            
+            loadNews();
+        }
+        
+        function togglePinNews(newsId, isPinned) {
+            updateNewsPinned(newsId, isPinned);
+            loadNews();
+        }
+        
+        function deleteNewsItem(newsId) {
+            if (confirm('Удалить новость?')) {
+                deleteNews(newsId);
+                showToast('Новость удалена', 'success');
+                loadNews();
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        loadAdminPanel();
+    </script>
+</body>
+</html>
