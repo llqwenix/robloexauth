@@ -159,7 +159,6 @@
             const user = checkAuth();
             
             if (!user) {
-                // Если не авторизован, перенаправляем на страницу входа
                 redirectToLogin();
                 return;
             }
@@ -168,23 +167,29 @@
             
             // Обновляем навбар
             const userInfo = document.getElementById('userInfo');
+            const isAdminUser = ADMIN_USERNAMES.includes(user.username);
             userInfo.innerHTML = `
                 <div class="user-info">
                     <div class="user-avatar">${user.username[0].toUpperCase()}</div>
-                    <span>${user.username} ${user.username === 'vynzxluf' ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
+                    <span>${user.username} ${isAdminUser ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
                     <button class="logout-btn" onclick="logout()">ВЫХОД</button>
                 </div>
             `;
             
-            // Показываем ссылку на админ-панель только для vynzxluf
+            // Показываем ссылку на админ-панель только для администраторов
             const navLinks = document.getElementById('navLinks');
-            if (user.username === 'vynzxluf') {
+            if (isAdminUser) {
                 if (!document.querySelector('.admin-link')) {
                     const adminLink = document.createElement('a');
                     adminLink.href = 'admin.html';
                     adminLink.textContent = 'АДМИН-ПАНЕЛЬ';
                     adminLink.className = 'admin-link';
                     navLinks.appendChild(adminLink);
+                }
+            } else {
+                const existingAdminLink = document.querySelector('.admin-link');
+                if (existingAdminLink) {
+                    existingAdminLink.remove();
                 }
             }
             
@@ -227,7 +232,6 @@
                 const img = new Image();
                 img.onload = function() {
                     if ((img.width === 64 && img.height === 64) || (img.width === 64 && img.height === 32)) {
-                        // Сохраняем скин
                         saveSkin(currentUserData.username, e.target.result);
                         const preview = document.getElementById('skinPreview');
                         preview.src = e.target.result;
