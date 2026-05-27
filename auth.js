@@ -1,11 +1,3 @@
-// auth.js
-
-// --- НАСТРОЙКИ ---
-// !!! ВАЖНО: Замените YOUR_SPREADSHEET_ID на реальный ID вашей таблицы !!!
-// ID можно взять из URL вашей Google Sheets: https://docs.google.com/spreadsheets/d/ЭТОТ_АЙДИ/edit
-const SPREADSHEET_ID = '1kb2B-XQ9SdjMXM_G0ORi3NEdfCg-aFoI-pVwVa2IXSI'; // СКОПИРУЙТЕ СЮДА ВАШ ID
-const API_KEY = 'AIzaSyB1BBzMEXEQ-tU30RfgPB16biw08GkjXVkY'; // Создайте API ключ в Google Cloud Console (для публичного доступа)
-
 // auth.js - общая логика для всех страниц
 
 // Настройки
@@ -45,18 +37,57 @@ function generateCookie() {
 // Работа с пользователями
 function getUsers() {
     const users = localStorage.getItem(STORAGE_KEY);
-    return users ? JSON.parse(users) : [];
+    if (!users) {
+        // Инициализируем пустым массивом, если нет данных
+        return [];
+    }
+    try {
+        const parsed = JSON.parse(users);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        console.error('Ошибка парсинга users:', e);
+        return [];
+    }
 }
 
 function saveUsers(users) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
 }
 
+// Функция для очистки всех пользователей (на случай ошибок)
+function clearAllUsers() {
+    if (confirm('⚠️ Это удалит ВСЕХ пользователей! Продолжить?')) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        localStorage.removeItem(CURRENT_USER_KEY);
+        showToast('Все пользователи удалены', 'success');
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    }
+}
+
 function registerUser(username, password) {
+    // Валидация
+    if (!username || username.length < 3) {
+        return { success: false, message: 'Имя пользователя должно быть не менее 3 символов!' };
+    }
+    
+    if (!password || password.length < 4) {
+        return { success: false, message: 'Пароль должен быть не менее 4 символов!' };
+    }
+    
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(username)) {
+        return { success: false, message: 'Имя пользователя может содержать только латиницу, цифры и подчёркивание!' };
+    }
+    
     const users = getUsers();
     
-    if (users.find(u => u.username === username)) {
-        return { success: false, message: 'Пользователь уже существует!' };
+    // Проверка на существование пользователя (точное совпадение по username)
+    const userExists = users.some(u => u.username && u.username.toLowerCase() === username.toLowerCase());
+    
+    if (userExists) {
+        return { success: false, message: 'Пользователь с таким именем уже существует!' };
     }
     
     const cookie = generateCookie();
@@ -71,12 +102,18 @@ function registerUser(username, password) {
     users.push(newUser);
     saveUsers(users);
     
+    // Логируем для отладки
+    console.log('✅ Новый пользователь создан:', username);
+    console.log('📊 Всего пользователей:', users.length);
+    
     return { success: true, cookie: cookie, message: 'Регистрация успешна!' };
 }
 
 function loginUser(username, password) {
     const users = getUsers();
     const passwordHash = hashPassword(password);
+    
+    // Ищем пользователя по username и паролю
     const user = users.find(u => u.username === username && u.password === passwordHash);
     
     if (user) {
@@ -97,7 +134,12 @@ function loginByCookie(cookie) {
 
 function getCurrentUser() {
     const user = localStorage.getItem(CURRENT_USER_KEY);
-    return user ? JSON.parse(user) : null;
+    if (!user) return null;
+    try {
+        return JSON.parse(user);
+    } catch (e) {
+        return null;
+    }
 }
 
 function saveCurrentUser(user) {
@@ -179,4 +221,13 @@ function redirectToHome() {
 
 function redirectToDashboard() {
     window.location.href = '/robloexauth/dashboard.html';
+}
+
+// Функция для отладки (вывести всех пользователей в консоль)
+function debugPrintUsers() {
+    const users = getUsers();
+    console.log('📋 Список пользователей:');
+    users.forEach((u, i) => {
+        console.log(`  ${i + 1}. ${u.username} (${u.role}) - создан: ${u.created}`);
+    });
 }
