@@ -4,184 +4,126 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robloex - Главная</title>
-    <link rel="stylesheet" href="style.css">
     <style>
-        .news-item {
-            background: rgba(0, 20, 0, 0.6);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(0, 255, 0, 0.2);
-            transition: all 0.3s;
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            background:linear-gradient(135deg,#0a0f0a 0%,#0a2e0a 50%,#0a0f0a 100%);
+            font-family:Arial,sans-serif;
+            min-height:100vh;
+            padding:20px
         }
-        .news-item:hover {
-            transform: translateY(-3px);
-            border-color: rgba(0, 255, 136, 0.5);
+        .container{max-width:800px;margin:0 auto}
+        .navbar{
+            background:rgba(10,30,10,0.95);
+            border-radius:20px;
+            padding:15px 20px;
+            margin-bottom:20px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center
         }
-        .news-pinned {
-            border-left: 4px solid #f39c12;
+        .logo{font-size:24px;font-weight:bold;color:#00ff88}
+        .user-info{display:flex;align-items:center;gap:15px}
+        .user-avatar{
+            width:32px;height:32px;
+            background:#00aa44;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            font-weight:bold;color:white
         }
-        .news-date {
-            font-size: 11px;
-            color: #008844;
-            margin-bottom: 5px;
+        .logout-btn{
+            background:#4a0a0a;border:none;color:white;
+            padding:6px 12px;border-radius:10px;cursor:pointer
         }
-        .news-title {
-            font-size: 18px;
-            font-weight: bold;
+        .glass-card{
+            background:rgba(10,30,10,0.95);
+            border-radius:20px;
+            padding:30px;
+            border:1px solid #00ff88
+        }
+        .card-header{font-size:24px;color:#00ff88;margin-bottom:20px}
+        .btn-primary{
+            background:#0a4d0a;border:none;color:white;
+            padding:12px;border-radius:10px;cursor:pointer;
+            width:100%;font-size:16px;margin-top:10px
+        }
+        .admin-badge{
+            background:#f39c12;color:#0a0f0a;
+            padding:2px 8px;border-radius:10px;font-size:10px;
+            margin-left:10px
+        }
+        .footer{text-align:center;margin-top:20px;color:#008844}
+        .admin-link {
             color: #00ff88;
-            margin-bottom: 10px;
+            margin-left: 15px;
+            text-decoration: none;
         }
-        .news-content {
-            color: #00aa66;
-            line-height: 1.5;
-            white-space: pre-wrap;
-        }
-        .admin-badge {
-            background: #f39c12;
-            color: #0a0f0a;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        .loading {
-            text-align: center;
-            padding: 50px;
-            color: #00aa66;
+        .admin-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <nav class="navbar">
+        <div class="navbar">
             <div class="logo">ROBLOEX</div>
-            <div class="nav-links" id="navLinks">
-                <a href="home.html" class="active">ГЛАВНАЯ</a>
-                <a href="dashboard.html">ПРОФИЛЬ</a>
-            </div>
             <div id="userInfo"></div>
-        </nav>
-        
-        <div class="glass-card">
-            <div class="card-header">🎮 ДОБРО ПОЖАЛОВАТЬ В ROBLOEX LAUNCHER</div>
-            <p class="description">
-                Современный лаунчер для Minecraft с поддержкой модов, скинов и многого другого.
-            </p>
-            <div class="info-grid">
-                <div class="info-card">
-                    <h4>🚀 ВОЗМОЖНОСТИ</h4>
-                    <ul>
-                        <li>Множество версий Minecraft</li>
-                        <li>Поддержка Forge и Fabric</li>
-                        <li>Управление скинами</li>
-                        <li>Автоматические обновления</li>
-                    </ul>
-                </div>
-                <div class="info-card">
-                    <h4>📥 СКАЧАТЬ ЛАУНЧЕР</h4>
-                    <p>Скачайте лаунчер и начните играть!</p>
-                    <button class="btn-primary" onclick="window.location.href='https://github.com/llqwenix/robloexauth/releases/download/v1.0/RobloexLauncher_Setup.exe'">СКАЧАТЬ</button>
-                </div>
-            </div>
         </div>
         
         <div class="glass-card">
-            <div class="card-header">📰 ПОСЛЕДНИЕ НОВОСТИ</div>
-            <div id="newsContainer">
-                <div class="loading">Загрузка новостей...</div>
-            </div>
+            <div class="card-header">🎮 ДОБРО ПОЖАЛОВАТЬ!</div>
+            <p>Современный лаунчер для Minecraft с поддержкой модов и скинов.</p>
+            <button class="btn-primary" onclick="alert('Скачивание...')">СКАЧАТЬ ЛАУНЧЕР</button>
         </div>
         
-        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+        <div class="footer">© 2024 Robloex Launcher</div>
     </div>
-    
-    <div id="toast" class="toast"></div>
-    
-    <script src="auth.js"></script>
+
     <script>
-        let currentUserData = null;
+        const ADMIN_USERNAMES = ['vynzxluf', 'vzxjall'];
         
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function getCurrentUser() {
+            const user = localStorage.getItem('robloex_user');
+            if (!user) return null;
+            try {
+                return JSON.parse(user);
+            } catch(e) {
+                return null;
+            }
         }
         
-        async function loadHomePage() {
-            console.log('Загрузка home.html...');
+        function logout() {
+            localStorage.removeItem('robloex_user');
+            window.location.href = 'login.html';
+        }
+        
+        function loadHome() {
+            const user = getCurrentUser();
             
-            // Проверяем авторизацию
-            const user = await checkAuth();
-            console.log('Результат checkAuth:', user);
-            
+            // Если нет пользователя - перенаправляем на вход
             if (!user) {
-                console.log('Пользователь не авторизован, перенаправление на login.html');
-                redirectToLogin();
+                window.location.href = 'login.html';
                 return;
             }
             
-            currentUserData = user;
-            console.log('Текущий пользователь:', user);
-            
-            // Обновляем навбар
+            const isAdmin = ADMIN_USERNAMES.includes(user.username);
             const userInfo = document.getElementById('userInfo');
-            const isAdminUser = ADMIN_USERNAMES.includes(user.username);
+            
+            let adminLinkHtml = '';
+            if (isAdmin) {
+                adminLinkHtml = '<a href="admin.html" class="admin-link">АДМИН-ПАНЕЛЬ</a>';
+            }
             
             userInfo.innerHTML = `
                 <div class="user-info">
                     <div class="user-avatar">${user.username[0].toUpperCase()}</div>
-                    <span>${user.username} ${isAdminUser ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
+                    <span>${user.username} ${isAdmin ? '<span class="admin-badge">ADMIN</span>' : ''}</span>
+                    ${adminLinkHtml}
                     <button class="logout-btn" onclick="logout()">ВЫХОД</button>
                 </div>
             `;
-            
-            // Показываем ссылку на админ-панель только для администраторов
-            const navLinks = document.getElementById('navLinks');
-            const existingAdminLink = document.querySelector('.admin-link');
-            
-            if (isAdminUser) {
-                if (!existingAdminLink) {
-                    const adminLink = document.createElement('a');
-                    adminLink.href = 'admin.html';
-                    adminLink.textContent = 'АДМИН-ПАНЕЛЬ';
-                    adminLink.className = 'admin-link';
-                    navLinks.appendChild(adminLink);
-                }
-            } else {
-                if (existingAdminLink) {
-                    existingAdminLink.remove();
-                }
-            }
-            
-            // Загружаем новости
-            await loadNewsOnHome();
         }
         
-        async function loadNewsOnHome() {
-            const news = await getNews();
-            const container = document.getElementById('newsContainer');
-            
-            if (!news || news.length === 0) {
-                container.innerHTML = '<p style="color: #00aa66; text-align: center;">Новостей пока нет</p>';
-                return;
-            }
-            
-            // Сначала закреплённые, потом остальные
-            const sortedNews = [...news].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-            
-            container.innerHTML = sortedNews.map(item => `
-                <div class="news-item ${item.pinned ? 'news-pinned' : ''}">
-                    <div class="news-date">📅 ${new Date(item.date).toLocaleString()}</div>
-                    <div class="news-title">${item.image || '📰'} ${escapeHtml(item.title)} ${item.pinned ? '📌' : ''}</div>
-                    <div class="news-content">${escapeHtml(item.content)}</div>
-                </div>
-            `).join('');
-        }
-        
-        // Запускаем загрузку страницы
-        loadHomePage();
+        loadHome();
     </script>
 </body>
 </html>
