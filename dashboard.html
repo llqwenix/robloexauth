@@ -102,6 +102,11 @@
             color: #008844;
             margin-top: 10px;
         }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #00aa66;
+        }
     </style>
 </head>
 <body>
@@ -154,16 +159,23 @@
     <script>
         let currentUserData = null;
         
-        function loadDashboard() {
-            const user = checkAuth();
+        async function loadDashboard() {
+            console.log('Загрузка dashboard.html...');
+            
+            // Проверяем авторизацию
+            const user = await checkAuth();
+            console.log('Результат checkAuth:', user);
             
             if (!user) {
+                console.log('Пользователь не авторизован, перенаправление на login.html');
                 redirectToLogin();
                 return;
             }
             
             currentUserData = user;
+            console.log('Текущий пользователь:', user);
             
+            // Обновляем навбар
             const userInfo = document.getElementById('userInfo');
             const isAdminUser = ADMIN_USERNAMES.includes(user.username);
             
@@ -175,6 +187,7 @@
                 </div>
             `;
             
+            // Показываем ссылку на админ-панель только для администраторов
             const navLinks = document.getElementById('navLinks');
             const existingAdminLink = document.querySelector('.admin-link');
             
@@ -192,10 +205,11 @@
                 }
             }
             
+            // Заполняем информацию
             document.getElementById('profileUsername').textContent = user.username;
             document.getElementById('profileRole').textContent = user.role === 'admin' ? 'Администратор' : 'Пользователь';
             
-            const users = getUsers();
+            const users = await getUsers();
             const userData = users.find(u => u.username === user.username);
             if (userData && userData.created) {
                 document.getElementById('profileCreated').textContent = new Date(userData.created).toLocaleDateString();
@@ -205,7 +219,8 @@
             
             document.getElementById('userCookie').value = user.cookie || 'Нет cookie';
             
-            const savedSkin = getSkin(user.username);
+            // Загружаем скин
+            const savedSkin = await getSkin(user.username);
             const preview = document.getElementById('skinPreview');
             if (savedSkin) {
                 preview.src = savedSkin;
@@ -215,7 +230,7 @@
             }
         }
         
-        function handleSkinUpload(file) {
+        async function handleSkinUpload(file) {
             if (!file) return;
             
             if (!file.type.match('image/png')) {
@@ -223,28 +238,18 @@
                 return;
             }
             
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    if ((img.width === 64 && img.height === 64) || (img.width === 64 && img.height === 32)) {
-                        saveSkin(currentUserData.username, e.target.result);
-                        const preview = document.getElementById('skinPreview');
-                        preview.src = e.target.result;
-                        preview.style.display = 'inline-block';
-                        showToast('Скин загружен! Он появится в лаунчере после перезапуска.', 'success');
-                    } else {
-                        showToast('Неверный размер! Поддерживаются 64x64 или 64x32 пикселей.', 'error');
-                    }
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+            uploadSkin(file, async (skinDataUrl) => {
+                await saveSkin(currentUserData.username, skinDataUrl);
+                const preview = document.getElementById('skinPreview');
+                preview.src = skinDataUrl;
+                preview.style.display = 'inline-block';
+                showToast('Скин загружен! Он появится в лаунчере после перезапуска.', 'success');
+            });
         }
         
-        function removeSkin() {
+        async function removeSkin() {
             if (confirm('Вы уверены, что хотите удалить скин? Будет восстановлен стандартный скин.')) {
-                deleteSkin(currentUserData.username);
+                await deleteSkin(currentUserData.username);
                 const preview = document.getElementById('skinPreview');
                 preview.style.display = 'none';
                 preview.src = '';
@@ -259,6 +264,7 @@
             showToast('Cookie скопирован!', 'success');
         }
         
+        // Запускаем загрузку страницы
         loadDashboard();
     </script>
 </body>
