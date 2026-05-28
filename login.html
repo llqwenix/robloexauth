@@ -122,12 +122,20 @@
             const user = users.find(u => u.username === username && u.password === passwordHash);
             
             if (user) {
-                msgDiv.textContent = '✅ Вход выполнен!';
+                // Сохраняем пользователя
+                const userData = {
+                    username: user.username,
+                    role: user.role || 'user',
+                    cookie: user.cookie || ''
+                };
+                localStorage.setItem('robloex_user', JSON.stringify(userData));
+                
+                msgDiv.textContent = '✅ Вход выполнен! Перенаправление...';
                 msgDiv.className = 'message success';
-                localStorage.setItem('robloex_user', JSON.stringify(user));
+                
                 setTimeout(() => {
                     window.location.href = 'home.html';
-                }, 1000);
+                }, 500);
             } else {
                 msgDiv.textContent = '❌ Неверное имя или пароль!';
                 msgDiv.className = 'message error';
@@ -136,11 +144,9 @@
             }
         }
         
-        // Проверяем сохранённого пользователя
-        const savedUser = localStorage.getItem('robloex_user');
-        if (savedUser) {
-            window.location.href = 'home.html';
-        }
+        // ПРОВЕРКА: если уже есть пользователь в localStorage, НЕ ПЕРЕНАПРАВЛЯЕМ АВТОМАТИЧЕСКИ
+        // Убираем автоматическое перенаправление, чтобы избежать цикла
+        // Пользователь сам решает, когда выйти
     </script>
 </body>
 </html>
