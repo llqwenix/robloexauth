@@ -4,106 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robloex - Админ-панель</title>
-    <link rel="stylesheet" href="style.css">
     <style>
-        .tab-buttons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(0, 255, 0, 0.2);
-            padding-bottom: 10px;
-            flex-wrap: wrap;
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            background:linear-gradient(135deg,#0a0f0a 0%,#0a2e0a 50%,#0a0f0a 100%);
+            font-family:Arial,sans-serif;
+            min-height:100vh;
+            padding:20px
         }
-        .tab-btn {
-            background: transparent;
-            border: 1px solid #00aa44;
-            padding: 8px 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
+        .container{max-width:1200px;margin:0 auto}
+        .navbar{
+            background:rgba(10,30,10,0.95);
+            border-radius:20px;
+            padding:15px 20px;
+            margin-bottom:20px;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            flex-wrap:wrap;
+            gap:10px
         }
-        .tab-btn.active {
-            background: #0a4d0a;
-            border-color: #00ff88;
-            color: #00ff88;
+        .logo{font-size:24px;font-weight:bold;color:#00ff88}
+        .nav-links{display:flex;gap:15px}
+        .nav-links a{color:#00aa66;text-decoration:none}
+        .nav-links a:hover{color:#00ff88}
+        .user-info{display:flex;align-items:center;gap:15px}
+        .user-avatar{
+            width:32px;height:32px;
+            background:#00aa44;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            font-weight:bold;color:white
         }
-        .tab-btn:hover {
-            background: rgba(0, 170, 68, 0.2);
+        .logout-btn{
+            background:#4a0a0a;border:none;color:white;
+            padding:6px 12px;border-radius:10px;cursor:pointer
         }
-        .tab-content {
-            display: none;
+        .glass-card{
+            background:rgba(10,30,10,0.95);
+            border-radius:20px;
+            padding:30px;
+            border:1px solid #00ff88
         }
-        .tab-content.active {
-            display: block;
+        .card-header{font-size:24px;color:#00ff88;margin-bottom:20px}
+        .tab-buttons{display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid rgba(0,255,0,0.2);padding-bottom:10px;flex-wrap:wrap}
+        .tab-btn{background:transparent;border:1px solid #00aa44;padding:8px 20px;border-radius:10px;cursor:pointer;color:#00aa66}
+        .tab-btn.active{background:#0a4d0a;border-color:#00ff88;color:#00ff88}
+        .tab-content{display:none}
+        .tab-content.active{display:block}
+        .request-card,.user-card{
+            background:rgba(0,20,0,0.6);
+            border-radius:15px;
+            padding:15px;
+            margin-bottom:15px;
+            border:1px solid rgba(0,255,0,0.2)
         }
-        .request-card, .user-card {
-            background: rgba(0, 20, 0, 0.6);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(0, 255, 0, 0.2);
-            transition: all 0.3s;
+        .btn-approve{background:#2ecc71;border:none;color:white;padding:5px 15px;border-radius:5px;cursor:pointer;margin-right:10px}
+        .btn-deny{background:#e74c3c;border:none;color:white;padding:5px 15px;border-radius:5px;cursor:pointer}
+        .btn-delete{background:#c0392b;border:none;color:white;padding:5px 15px;border-radius:5px;cursor:pointer}
+        .admin-badge{background:#f39c12;color:#0a0f0a;padding:2px 8px;border-radius:10px;font-size:10px;margin-left:10px}
+        .access-denied{text-align:center;padding:50px}
+        .loading{text-align:center;padding:50px;color:#00aa66}
+        .inline-form{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+        input, select{
+            background:#0a1a0a;border:1px solid #00aa44;
+            padding:8px;border-radius:5px;color:#00ff88
         }
-        .request-card:hover, .user-card:hover {
-            border-color: #00ff88;
-        }
-        .badge-pending { color: #f39c12; }
-        .badge-approved { color: #2ecc71; }
-        .badge-denied { color: #e74c3c; }
-        .btn-approve { background: #2ecc71; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; }
-        .btn-deny { background: #e74c3c; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
-        .btn-ban { background: #e74c3c; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
-        .btn-unban { background: #2ecc71; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
-        .btn-delete { background: #c0392b; border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; }
-        .news-item {
-            background: rgba(0, 20, 0, 0.6);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(0, 255, 0, 0.2);
-        }
-        .news-pinned {
-            border-left: 4px solid #f39c12;
-        }
-        .ban-duration {
-            width: 80px;
-            padding: 5px;
-            margin-right: 10px;
-        }
-        .ban-reason {
-            width: 150px;
-            padding: 5px;
-            margin-right: 10px;
-        }
-        .inline-form {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .admin-badge {
-            background: #f39c12;
-            color: #0a0f0a;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        .access-denied {
-            text-align: center;
-            padding: 50px;
-        }
-        .loading {
-            text-align: center;
-            padding: 50px;
-            color: #00aa66;
-        }
+        button{cursor:pointer}
     </style>
 </head>
 <body>
     <div class="container">
-        <nav class="navbar">
+        <div class="navbar">
             <div class="logo">ROBLOEX ADMIN</div>
             <div class="nav-links">
                 <a href="home.html">ГЛАВНАЯ</a>
@@ -111,53 +82,70 @@
                 <a href="admin.html" class="active">АДМИН-ПАНЕЛЬ</a>
             </div>
             <div id="userInfo"></div>
-        </nav>
+        </div>
         
         <div id="adminContent">
             <div class="loading">Загрузка...</div>
         </div>
         
-        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+        <div class="footer">© 2024 Robloex Launcher</div>
     </div>
-    
-    <div id="toast" class="toast"></div>
-    
-    <script src="auth.js"></script>
+
     <script>
+        const SPREADSHEET_ID = '17dPJNS4c_eZZwWMHLrvvBwiv5N8cvQsl1yp9tl4eZ2c';
+        const API_KEY = 'AIzaSyB1BBzMEXEQ-tU30RfgPB16biw08GkjXVk';
+        const ADMIN_USERNAMES = ['vynzxluf', 'vzxjall'];
+        
         let currentAdmin = null;
         
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+        function getCurrentUser() {
+            const user = localStorage.getItem('robloex_user');
+            if (!user) return null;
+            try {
+                return JSON.parse(user);
+            } catch(e) {
+                return null;
+            }
         }
         
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            
-            document.getElementById(`${tabName}Tab`).classList.add('active');
-            event.target.classList.add('active');
-            
-            if (tabName === 'requests') loadRequests();
-            if (tabName === 'users') loadUsers();
-            if (tabName === 'bans') loadBans();
-            if (tabName === 'news') loadNews();
+        function logout() {
+            localStorage.removeItem('robloex_user');
+            window.location.href = 'login.html';
+        }
+        
+        async function getSheetData(sheetName = 'Лист1', range = 'A:H') {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!${range}?key=${API_KEY}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.values && data.values.length > 1) {
+                    const headers = data.values[0];
+                    return data.values.slice(1).map(row => {
+                        const obj = {};
+                        headers.forEach((h, i) => obj[h] = row[i] || '');
+                        return obj;
+                    });
+                }
+                return [];
+            } catch(e) {
+                console.error(e);
+                return [];
+            }
+        }
+        
+        async function getUsers() {
+            return await getSheetData('Лист1', 'A:H');
         }
         
         async function loadAdminPanel() {
-            console.log('Загрузка admin.html...');
-            
-            const user = await checkAuth();
-            console.log('Пользователь:', user);
+            const user = getCurrentUser();
             
             if (!user || !ADMIN_USERNAMES.includes(user.username)) {
                 document.getElementById('adminContent').innerHTML = `
                     <div class="glass-card access-denied">
                         <div class="card-header">⛔ ДОСТУП ЗАПРЕЩЁН</div>
-                        <p style="color: #e74c3c; font-size: 18px; margin-bottom: 20px;">У вас нет прав доступа к этой странице.</p>
-                        <p style="color: #00aa66;">Только администраторы системы имеют доступ к админ-панели.</p>
-                        <button class="btn-primary" onclick="redirectToHome()" style="margin-top: 30px; width: auto; padding: 10px 30px;">ВЕРНУТЬСЯ НА ГЛАВНУЮ</button>
+                        <p style="color:#e74c3c;font-size:18px;margin-bottom:20px;">У вас нет прав доступа к этой странице.</p>
+                        <button class="btn-primary" onclick="window.location.href='home.html'">ВЕРНУТЬСЯ НА ГЛАВНУЮ</button>
                     </div>
                 `;
                 return;
@@ -177,317 +165,50 @@
             document.getElementById('adminContent').innerHTML = `
                 <div class="glass-card">
                     <div class="card-header">👑 АДМИН-ПАНЕЛЬ</div>
-                    
                     <div class="tab-buttons">
-                        <button class="tab-btn active" onclick="showTab('requests')">📋 ЗАЯВКИ</button>
-                        <button class="tab-btn" onclick="showTab('users')">👥 ПОЛЬЗОВАТЕЛИ</button>
-                        <button class="tab-btn" onclick="showTab('bans')">🚫 БАНЫ</button>
-                        <button class="tab-btn" onclick="showTab('news')">📰 НОВОСТИ</button>
+                        <button class="tab-btn active" onclick="showTab('users')">👥 ПОЛЬЗОВАТЕЛИ</button>
                     </div>
-                    
-                    <div id="requestsTab" class="tab-content active">
-                        <h3 style="color: #00ff88; margin-bottom: 15px;">Новые заявки</h3>
-                        <div id="pendingRequestsList"><div class="loading">Загрузка...</div></div>
-                        <h3 style="color: #00ff88; margin-top: 30px; margin-bottom: 15px;">Обработанные заявки</h3>
-                        <div id="processedRequestsList"><div class="loading">Загрузка...</div></div>
-                    </div>
-                    
-                    <div id="usersTab" class="tab-content">
-                        <div class="form-group">
-                            <input type="text" id="searchUser" placeholder="Поиск пользователя..." onkeyup="filterUsers()">
-                        </div>
+                    <div id="usersTab" class="tab-content active">
                         <div id="usersList"><div class="loading">Загрузка...</div></div>
-                    </div>
-                    
-                    <div id="bansTab" class="tab-content">
-                        <div class="info-card" style="margin-bottom: 20px;">
-                            <h4>➕ ЗАБАНИТЬ ПОЛЬЗОВАТЕЛЯ</h4>
-                            <div class="inline-form">
-                                <input type="text" id="banUsername" placeholder="Имя пользователя" style="width: 150px;">
-                                <input type="text" id="banReason" placeholder="Причина" style="width: 150px;">
-                                <select id="banDuration" class="ban-duration">
-                                    <option value="0">Навсегда</option>
-                                    <option value="1">1 час</option>
-                                    <option value="6">6 часов</option>
-                                    <option value="24">1 день</option>
-                                    <option value="168">7 дней</option>
-                                    <option value="720">30 дней</option>
-                                </select>
-                                <button class="btn-ban" onclick="banUserFromUI()">ЗАБАНИТЬ</button>
-                            </div>
-                        </div>
-                        <h3 style="color: #00ff88; margin-bottom: 15px;">Активные баны</h3>
-                        <div id="activeBansList"><div class="loading">Загрузка...</div></div>
-                    </div>
-                    
-                    <div id="newsTab" class="tab-content">
-                        <div class="info-card" style="margin-bottom: 20px;">
-                            <h4>➕ ДОБАВИТЬ НОВОСТЬ</h4>
-                            <div class="form-group">
-                                <input type="text" id="newsTitle" placeholder="Заголовок">
-                            </div>
-                            <div class="form-group">
-                                <textarea id="newsContent" rows="4" placeholder="Текст новости..."></textarea>
-                            </div>
-                            <div class="form-group">
-                                <input type="text" id="newsImage" placeholder="Эмодзи (например, 🎉)">
-                            </div>
-                            <div class="form-group">
-                                <label><input type="checkbox" id="newsPinned"> Закрепить новость</label>
-                            </div>
-                            <button class="btn-primary" onclick="addNewsFromUI()" style="width: auto; padding: 10px 20px;">➕ ОПУБЛИКОВАТЬ</button>
-                        </div>
-                        <h3 style="color: #00ff88; margin-bottom: 15px;">Все новости</h3>
-                        <div id="newsList"><div class="loading">Загрузка...</div></div>
                     </div>
                 </div>
             `;
             
-            await loadRequests();
-        }
-        
-        async function loadRequests() {
-            const requests = await getRequests();
-            const pending = requests.filter(r => r.status === 'pending');
-            const processed = requests.filter(r => r.status !== 'pending');
-            
-            const pendingContainer = document.getElementById('pendingRequestsList');
-            const processedContainer = document.getElementById('processedRequestsList');
-            
-            if (pending.length === 0) {
-                pendingContainer.innerHTML = '<p style="color: #00aa66;">Нет новых заявок</p>';
-            } else {
-                pendingContainer.innerHTML = pending.map(req => `
-                    <div class="request-card">
-                        <p><strong>👤 ${escapeHtml(req.username)}</strong></p>
-                        <p>📅 ${new Date(req.created_at).toLocaleString()}</p>
-                        <div style="margin-top: 10px;">
-                            <button class="btn-approve" onclick="handleApproveRequest(${req.id})">✅ ОДОБРИТЬ</button>
-                            <button class="btn-deny" onclick="handleDenyRequest(${req.id})">❌ ОТКЛОНИТЬ</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            if (processed.length === 0) {
-                processedContainer.innerHTML = '<p style="color: #00aa66;">Нет обработанных заявок</p>';
-            } else {
-                processedContainer.innerHTML = processed.map(req => `
-                    <div class="request-card">
-                        <p><strong>👤 ${escapeHtml(req.username)}</strong></p>
-                        <p>📅 ${new Date(req.created_at).toLocaleString()}</p>
-                        <p>Статус: <span class="badge-${req.status}">${req.status === 'approved' ? '✅ ОДОБРЕНА' : '❌ ОТКЛОНЕНА'}</span></p>
-                        <p>Рассмотрено: ${req.reviewed_by} - ${new Date(req.reviewed_at).toLocaleString()}</p>
-                    </div>
-                `).join('');
-            }
-        }
-        
-        async function handleApproveRequest(requestId) {
-            console.log('✅ Одобрение заявки:', requestId);
-            
-            if (await approveRequest(requestId, currentAdmin.username)) {
-                showToast('Заявка одобрена! Пользователь создан.', 'success');
-                await loadRequests();
-                await loadUsers();
-            } else {
-                showToast('Ошибка при одобрении заявки', 'error');
-            }
-        }
-        
-        async function handleDenyRequest(requestId) {
-            console.log('❌ Отклонение заявки:', requestId);
-            
-            if (await denyRequest(requestId, currentAdmin.username)) {
-                showToast('Заявка отклонена', 'success');
-                await loadRequests();
-            } else {
-                showToast('Ошибка при отклонении заявки', 'error');
-            }
+            await loadUsers();
         }
         
         async function loadUsers() {
-            const users = await getAllUsers();
+            const users = await getUsers();
             const container = document.getElementById('usersList');
             
             if (users.length === 0) {
-                container.innerHTML = '<p style="color: #00aa66;">Нет пользователей</p>';
+                container.innerHTML = '<p style="color:#00aa66;">Нет пользователей</p>';
                 return;
             }
             
-            container.innerHTML = users.map(user => {
-                return `
-                    <div class="user-card">
-                        <p><strong>👤 ${escapeHtml(user.username)}</strong> ${ADMIN_USERNAMES.includes(user.username) ? '<span class="admin-badge">АДМИНИСТРАТОР</span>' : ''}</p>
-                        <p>Роль: ${user.role === 'admin' ? '👑 Администратор' : '👤 Пользователь'}</p>
-                        <p>📅 Создан: ${new Date(user.created).toLocaleDateString()}</p>
-                        <p>🔑 Cookie: <span style="font-family: monospace; font-size: 10px;">${user.cookie ? user.cookie.substring(0, 20) + '...' : 'Нет'}</span></p>
-                        ${user.is_banned ? `<p style="color: #e74c3c;">🚫 Забанен${user.ban_until ? ` до ${new Date(user.ban_until).toLocaleString()}` : ' навсегда'}</p>` : ''}
-                        <div style="margin-top: 10px;">
-                            ${!ADMIN_USERNAMES.includes(user.username) ? `
-                                <select id="role-${user.username}" onchange="changeRole('${user.username}', this.value)">
-                                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Пользователь</option>
-                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Администратор</option>
-                                </select>
-                                <button class="btn-delete" onclick="deleteUserAccount('${user.username}')">🗑 УДАЛИТЬ</button>
-                            ` : '<span style="color: #f39c12;">⭐ Системный администратор</span>'}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        async function changeRole(username, newRole) {
-            if (ADMIN_USERNAMES.includes(username)) {
-                showToast('Нельзя изменить роль системного администратора!', 'error');
-                return;
-            }
-            if (await changeUserRole(username, newRole)) {
-                showToast(`Роль пользователя ${username} изменена`, 'success');
-                await loadUsers();
-            } else {
-                showToast('Ошибка изменения роли', 'error');
-            }
-        }
-        
-        async function deleteUserAccount(username) {
-            if (ADMIN_USERNAMES.includes(username)) {
-                showToast('Нельзя удалить системного администратора!', 'error');
-                return;
-            }
-            if (confirm(`Удалить пользователя ${username}?`)) {
-                if (await deleteUser(username)) {
-                    showToast(`Пользователь ${username} удалён`, 'success');
-                    await loadUsers();
-                    await loadBans();
-                } else {
-                    showToast('Ошибка удаления', 'error');
-                }
-            }
-        }
-        
-        function filterUsers() {
-            const search = document.getElementById('searchUser').value.toLowerCase();
-            const cards = document.querySelectorAll('#usersList .user-card');
-            cards.forEach(card => {
-                const text = card.textContent.toLowerCase();
-                card.style.display = text.includes(search) ? 'block' : 'none';
-            });
-        }
-        
-        async function loadBans() {
-            const users = await getAllUsers();
-            const bannedUsers = users.filter(u => u.is_banned);
-            const container = document.getElementById('activeBansList');
-            
-            if (bannedUsers.length === 0) {
-                container.innerHTML = '<p style="color: #00aa66;">Нет активных банов</p>';
-                return;
-            }
-            
-            container.innerHTML = bannedUsers.map(user => `
+            container.innerHTML = users.map(user => `
                 <div class="user-card">
-                    <p><strong>👤 ${escapeHtml(user.username)}</strong></p>
-                    <p>Причина: ${escapeHtml(user.ban_reason)}</p>
-                    <p>До: ${user.ban_until ? new Date(user.ban_until).toLocaleString() : 'Навсегда'}</p>
-                    <button class="btn-unban" onclick="unbanUserAccount('${user.username}')">🔓 РАЗБАНИТЬ</button>
+                    <p><strong>👤 ${escapeHtml(user.username)}</strong> ${ADMIN_USERNAMES.includes(user.username) ? '<span class="admin-badge">АДМИНИСТРАТОР</span>' : ''}</p>
+                    <p>Роль: ${user.role === 'admin' ? 'Администратор' : 'Пользователь'}</p>
+                    <p>📅 Создан: ${user.created ? new Date(user.created).toLocaleDateString() : 'Неизвестно'}</p>
+                    <p>🔑 Cookie: ${user.cookie ? user.cookie.substring(0, 20) + '...' : 'Нет'}</p>
+                    ${user.is_banned === 'TRUE' ? `<p style="color:#e74c3c;">🚫 Забанен</p>` : ''}
                 </div>
             `).join('');
         }
         
-        async function banUserFromUI() {
-            const username = document.getElementById('banUsername').value.trim();
-            const reason = document.getElementById('banReason').value.trim();
-            const duration = parseInt(document.getElementById('banDuration').value);
-            
-            if (!username || !reason) {
-                showToast('Введите имя пользователя и причину бана!', 'error');
-                return;
-            }
-            
-            if (ADMIN_USERNAMES.includes(username)) {
-                showToast('Нельзя забанить системного администратора!', 'error');
-                return;
-            }
-            
-            if (await banUser(username, reason, duration, currentAdmin.username)) {
-                showToast(`Пользователь ${username} забанен`, 'success');
-                document.getElementById('banUsername').value = '';
-                document.getElementById('banReason').value = '';
-                await loadBans();
-                await loadUsers();
-            } else {
-                showToast('Ошибка при бане', 'error');
-            }
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+            event.target.classList.add('active');
         }
         
-        async function unbanUserAccount(username) {
-            if (await unbanUser(username)) {
-                showToast(`Пользователь ${username} разбанен`, 'success');
-                await loadBans();
-                await loadUsers();
-            } else {
-                showToast('Ошибка при разбане', 'error');
-            }
-        }
-        
-        async function loadNews() {
-            const news = await getNews();
-            const container = document.getElementById('newsList');
-            
-            if (news.length === 0) {
-                container.innerHTML = '<p style="color: #00aa66;">Нет новостей</p>';
-                return;
-            }
-            
-            container.innerHTML = news.map(item => `
-                <div class="news-item ${item.pinned ? 'news-pinned' : ''}">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h4 style="color: #00ff88;">${item.image || '📰'} ${escapeHtml(item.title)} ${item.pinned ? '📌' : ''}</h4>
-                        <small>${new Date(item.date).toLocaleString()}</small>
-                    </div>
-                    <p style="margin-top: 10px; white-space: pre-wrap;">${escapeHtml(item.content)}</p>
-                    <div style="margin-top: 10px;">
-                        <button class="btn-approve" onclick="togglePinNews(${item.id}, ${!item.pinned})" style="background: #3498db;">${item.pinned ? '📌 ОТКРЕПИТЬ' : '📌 ЗАКРЕПИТЬ'}</button>
-                        <button class="btn-delete" onclick="deleteNewsItem(${item.id})">🗑 УДАЛИТЬ</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        async function addNewsFromUI() {
-            const title = document.getElementById('newsTitle').value.trim();
-            const content = document.getElementById('newsContent').value.trim();
-            const image = document.getElementById('newsImage').value.trim() || '📰';
-            const pinned = document.getElementById('newsPinned').checked;
-            
-            if (!title || !content) {
-                showToast('Введите заголовок и текст новости!', 'error');
-                return;
-            }
-            
-            await addNews(title, content, image, pinned);
-            showToast('Новость добавлена!', 'success');
-            
-            document.getElementById('newsTitle').value = '';
-            document.getElementById('newsContent').value = '';
-            document.getElementById('newsImage').value = '';
-            document.getElementById('newsPinned').checked = false;
-            
-            await loadNews();
-        }
-        
-        async function togglePinNews(newsId, isPinned) {
-            await updateNewsPinned(newsId, isPinned);
-            await loadNews();
-        }
-        
-        async function deleteNewsItem(newsId) {
-            if (confirm('Удалить новость?')) {
-                await deleteNews(newsId);
-                showToast('Новость удалена', 'success');
-                await loadNews();
-            }
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
         
         loadAdminPanel();
