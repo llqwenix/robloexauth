@@ -12,7 +12,7 @@
             min-height:100vh;
             padding:20px
         }
-        .container{max-width:800px;margin:0 auto}
+        .container{max-width:1000px;margin:0 auto}
         .navbar{
             background:rgba(10,30,10,0.95);
             border-radius:20px;
@@ -20,9 +20,14 @@
             margin-bottom:20px;
             display:flex;
             justify-content:space-between;
-            align-items:center
+            align-items:center;
+            flex-wrap:wrap;
+            gap:10px
         }
         .logo{font-size:24px;font-weight:bold;color:#00ff88}
+        .nav-links{display:flex;gap:15px}
+        .nav-links a{color:#00aa66;text-decoration:none}
+        .nav-links a:hover{color:#00ff88}
         .user-info{display:flex;align-items:center;gap:15px}
         .user-avatar{
             width:32px;height:32px;
@@ -38,7 +43,8 @@
             background:rgba(10,30,10,0.95);
             border-radius:20px;
             padding:30px;
-            border:1px solid #00ff88
+            border:1px solid #00ff88;
+            margin-bottom:20px
         }
         .card-header{font-size:24px;color:#00ff88;margin-bottom:20px}
         .btn-primary{
@@ -54,11 +60,69 @@
         .footer{text-align:center;margin-top:20px;color:#008844}
         .admin-link {
             color: #00ff88;
-            margin-left: 15px;
             text-decoration: none;
         }
         .admin-link:hover {
             text-decoration: underline;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .info-card {
+            background: rgba(0, 20, 0, 0.6);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+        }
+        .info-card h4 {
+            color: #00ff88;
+            margin-bottom: 15px;
+        }
+        .info-card ul {
+            margin-left: 20px;
+            color: #00aa66;
+        }
+        .info-card li {
+            margin: 8px 0;
+        }
+        .description {
+            color: #00aa66;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .news-item {
+            background: rgba(0, 20, 0, 0.6);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            transition: all 0.3s;
+        }
+        .news-item:hover {
+            transform: translateY(-3px);
+            border-color: #00ff88;
+        }
+        .news-pinned {
+            border-left: 4px solid #f39c12;
+        }
+        .news-date {
+            font-size: 11px;
+            color: #008844;
+            margin-bottom: 5px;
+        }
+        .news-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+        .news-content {
+            color: #00aa66;
+            line-height: 1.5;
+            white-space: pre-wrap;
         }
     </style>
 </head>
@@ -66,19 +130,49 @@
     <div class="container">
         <div class="navbar">
             <div class="logo">ROBLOEX</div>
+            <div class="nav-links">
+                <a href="home.html" class="active">ГЛАВНАЯ</a>
+                <a href="dashboard.html">ПРОФИЛЬ</a>
+            </div>
             <div id="userInfo"></div>
         </div>
         
         <div class="glass-card">
-            <div class="card-header">🎮 ДОБРО ПОЖАЛОВАТЬ!</div>
-            <p>Современный лаунчер для Minecraft с поддержкой модов и скинов.</p>
-            <button class="btn-primary" onclick="alert('Скачивание...')">СКАЧАТЬ ЛАУНЧЕР</button>
+            <div class="card-header">🎮 ДОБРО ПОЖАЛОВАТЬ В ROBLOEX LAUNCHER</div>
+            <p class="description">
+                Современный лаунчер для Minecraft с поддержкой модов, скинов и многого другого.
+            </p>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h4>🚀 ВОЗМОЖНОСТИ</h4>
+                    <ul>
+                        <li>Множество версий Minecraft</li>
+                        <li>Поддержка Forge и Fabric</li>
+                        <li>Управление скинами</li>
+                        <li>Автоматические обновления</li>
+                    </ul>
+                </div>
+                <div class="info-card">
+                    <h4>📥 СКАЧАТЬ ЛАУНЧЕР</h4>
+                    <p>Скачайте лаунчер и начните играть!</p>
+                    <button class="btn-primary" onclick="alert('Ссылка для скачивания появится позже')">СКАЧАТЬ</button>
+                </div>
+            </div>
         </div>
         
-        <div class="footer">© 2024 Robloex Launcher</div>
+        <div class="glass-card">
+            <div class="card-header">📰 ПОСЛЕДНИЕ НОВОСТИ</div>
+            <div id="newsContainer">
+                <p style="color: #00aa66; text-align: center;">Загрузка новостей...</p>
+            </div>
+        </div>
+        
+        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
     </div>
 
     <script>
+        const SPREADSHEET_ID = '17dPJNS4c_eZZwWMHLrvvBwiv5N8cvQsl1yp9tl4eZ2c';
+        const API_KEY = 'AIzaSyB1BBzMEXEQ-tU30RfgPB16biw08GkjXVk';
         const ADMIN_USERNAMES = ['vynzxluf', 'vzxjall'];
         
         function getCurrentUser() {
@@ -96,10 +190,57 @@
             window.location.href = 'login.html';
         }
         
+        async function getNews() {
+            try {
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/News!A:E?key=${API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.values && data.values.length > 1) {
+                    return data.values.slice(1).map(row => ({
+                        id: row[0],
+                        title: row[1],
+                        content: row[2],
+                        date: row[3],
+                        pinned: row[4] === 'TRUE'
+                    }));
+                }
+                return [];
+            } catch(e) {
+                console.error('Ошибка загрузки новостей:', e);
+                return [];
+            }
+        }
+        
+        async function loadNews() {
+            const container = document.getElementById('newsContainer');
+            const news = await getNews();
+            
+            if (news.length === 0) {
+                container.innerHTML = '<p style="color: #00aa66; text-align: center;">Новостей пока нет</p>';
+                return;
+            }
+            
+            const sortedNews = [...news].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+            
+            container.innerHTML = sortedNews.map(item => `
+                <div class="news-item ${item.pinned ? 'news-pinned' : ''}">
+                    <div class="news-date">📅 ${new Date(item.date).toLocaleString()}</div>
+                    <div class="news-title">📰 ${escapeHtml(item.title)} ${item.pinned ? '📌' : ''}</div>
+                    <div class="news-content">${escapeHtml(item.content)}</div>
+                </div>
+            `).join('');
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         function loadHome() {
             const user = getCurrentUser();
             
-            // Если нет пользователя - перенаправляем на вход
             if (!user) {
                 window.location.href = 'login.html';
                 return;
@@ -121,6 +262,8 @@
                     <button class="logout-btn" onclick="logout()">ВЫХОД</button>
                 </div>
             `;
+            
+            loadNews();
         }
         
         loadHome();
