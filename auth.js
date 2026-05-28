@@ -1,15 +1,11 @@
-// auth.js - общая логика для всех страниц
+// auth.js - с подключением к Supabase
 
-// ========== НАСТРОЙКИ ==========
-const STORAGE_KEY = 'robloex_users';
-const REQUESTS_KEY = 'robloex_requests';
-const BANS_KEY = 'robloex_bans';
-const NEWS_KEY = 'robloex_news';
-const CURRENT_USER_KEY = 'robloex_current_user';
-const SKINS_STORAGE_KEY = 'robloex_skins';
+// ========== НАСТРОЙКИ SUPABASE ==========
+const SUPABASE_URL = 'https://ВАШ_ПРОЕКТ.supabase.co';  // ЗАМЕНИТЕ НА ВАШ URL
+const SUPABASE_ANON_KEY = 'ВАШ_АННОН_КЛЮЧ';  // ЗАМЕНИТЕ НА ВАШ КЛЮЧ
 
 // ========== НАСТРОЙКИ АДМИНОВ ==========
-const ADMIN_USERNAMES = ['vynzxluf', 'vzxjall']; // Список администраторов
+const ADMIN_USERNAMES = ['vynzxluf', 'vzxjall'];
 
 // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 function showToast(message, type = 'success') {
@@ -40,566 +36,459 @@ function generateCookie() {
     return [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 }
 
+// ========== РАБОТА С SUPABASE ==========
+async function supabaseRequest(endpoint, method = 'GET', body = null) {
+    const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+    const headers = {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+    };
+    
+    const options = {
+        method: method,
+        headers: headers
+    };
+    
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+    
+    const response = await fetch(url, options);
+    return await response.json();
+}
+
 // ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ==========
-function getUsers() {
-    const users = localStorage.getItem(STORAGE_KEY);
-    if (!users) return [];
+async function getUsers() {
     try {
-        const parsed = JSON.parse(users);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-        console.error('Ошибка парсинга users:', e);
-        return [];
-    }
-}
-
-function saveUsers(users) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-    console.log('💾 Пользователи сохранены:', users.length);
-}
-
-// ========== РАБОТА С ЗАЯВКАМИ ==========
-function getRequests() {
-    const requests = localStorage.getItem(REQUESTS_KEY);
-    if (!requests) return [];
-    try {
-        const parsed = JSON.parse(requests);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-        console.error('Ошибка парсинга requests:', e);
-        return [];
-    }
-}
-
-function saveRequests(requests) {
-    localStorage.setItem(REQUESTS_KEY, JSON.stringify(requests));
-    console.log('💾 Заявки сохранены:', requests.length);
-}
-
-function createRequest(username, password) {
-    console.log('📝 Создание заявки для:', username);
-    
-    const requests = getRequests();
-    
-    // Проверяем, нет ли уже заявки от этого пользователя
-    if (requests.some(r => r.username === username)) {
-        return { success: false, message: 'Заявка от этого пользователя уже существует!' };
-    }
-    
-    // Проверяем, не зарегистрирован ли уже пользователь
-    const users = getUsers();
-    if (users.some(u => u.username === username)) {
-        return { success: false, message: 'Пользователь с таким именем уже зарегистрирован!' };
-    }
-    
-    const newRequest = {
-        id: Date.now(),
-        username: username,
-        password: hashPassword(password),
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        reviewedBy: null,
-        reviewedAt: null
-    };
-    
-    requests.push(newRequest);
-    saveRequests(requests);
-    console.log('✅ Заявка создана:', newRequest);
-    
-    return { success: true, message: 'Заявка отправлена на рассмотрение!' };
-}
-
-function approveRequest(requestId, adminName) {
-    console.log('✅ Одобрение заявки:', requestId, 'администратором:', adminName);
-    
-    const requests = getRequests();
-    const requestIndex = requests.findIndex(r => r.id === requestId);
-    
-    if (requestIndex === -1) {
-        console.log('❌ Заявка не найдена');
-        return false;
-    }
-    
-    const request = requests[requestIndex];
-    if (request.status !== 'pending') {
-        console.log('❌ Заявка уже обработана, статус:', request.status);
-        return false;
-    }
-    
-    // Создаём пользователя
-    const users = getUsers();
-    const cookie = generateCookie();
-    
-    const newUser = {
-        username: request.username,
-        password: request.password,
-        cookie: cookie,
-        role: 'user',
-        created: new Date().toISOString(),
-        isBanned: false,
-        banUntil: null
-    };
-    
-    users.push(newUser);
-    saveUsers(users);
-    console.log('✅ Пользователь создан:', newUser);
-    
-    // Обновляем статус заявки
-    request.status = 'approved';
-    request.reviewedBy = adminName;
-    request.reviewedAt = new Date().toISOString();
-    requests[requestIndex] = request;
-    saveRequests(requests);
-    
-    console.log('✅ Заявка одобрена');
-    return true;
-}
-
-function denyRequest(requestId, adminName) {
-    console.log('❌ Отклонение заявки:', requestId, 'администратором:', adminName);
-    
-    const requests = getRequests();
-    const requestIndex = requests.findIndex(r => r.id === requestId);
-    
-    if (requestIndex === -1) {
-        console.log('❌ Заявка не найдена');
-        return false;
-    }
-    
-    requests[requestIndex].status = 'denied';
-    requests[requestIndex].reviewedBy = adminName;
-    requests[requestIndex].reviewedAt = new Date().toISOString();
-    saveRequests(requests);
-    
-    console.log('✅ Заявка отклонена');
-    return true;
-}
-
-// ========== РАБОТА С БАНАМИ ==========
-function getBans() {
-    const bans = localStorage.getItem(BANS_KEY);
-    if (!bans) return [];
-    try {
-        return JSON.parse(bans);
-    } catch (e) {
-        return [];
-    }
-}
-
-function saveBans(bans) {
-    localStorage.setItem(BANS_KEY, JSON.stringify(bans));
-}
-
-function isUserBanned(username) {
-    const bans = getBans();
-    const now = new Date();
-    const activeBan = bans.find(b => b.username === username && (!b.until || new Date(b.until) > now));
-    return activeBan || null;
-}
-
-function banUser(username, reason, durationHours, adminName) {
-    console.log('🚫 Бан пользователя:', username, 'причина:', reason);
-    
-    const bans = getBans();
-    const filteredBans = bans.filter(b => b.username !== username);
-    
-    const until = durationHours ? new Date(Date.now() + durationHours * 3600000).toISOString() : null;
-    
-    filteredBans.push({
-        username: username,
-        reason: reason,
-        until: until,
-        createdBy: adminName,
-        createdAt: new Date().toISOString()
-    });
-    
-    saveBans(filteredBans);
-    console.log('✅ Пользователь забанен');
-    
-    // Если пользователь сейчас залогинен, разлогиниваем его
-    const currentUser = getCurrentUser();
-    if (currentUser && currentUser.username === username) {
-        clearCurrentUser();
-        console.log('👤 Пользователь разлогинен');
-    }
-    
-    return true;
-}
-
-function unbanUser(username) {
-    console.log('🔓 Разбан пользователя:', username);
-    
-    const bans = getBans();
-    const filteredBans = bans.filter(b => b.username !== username);
-    saveBans(filteredBans);
-    
-    console.log('✅ Пользователь разбанен');
-    return true;
-}
-
-// ========== РАБОТА С НОВОСТЯМИ ==========
-function getNews() {
-    const news = localStorage.getItem(NEWS_KEY);
-    if (!news) {
-        const defaultNews = [
-            {
-                id: 1,
-                title: 'Добро пожаловать в Robloex Launcher!',
-                content: 'Мы рады приветствовать вас в нашем лаунчере. Здесь вы найдёте лучшие версии Minecraft, поддержку модов и многое другое!',
-                image: '🎉',
-                date: new Date().toISOString(),
-                pinned: true
-            },
-            {
-                id: 2,
-                title: 'Как начать играть?',
-                content: '1. Зарегистрируйтесь и получите Cookie\n2. Скачайте лаунчер\n3. Введите Cookie в лаунчере\n4. Выберите версию и играйте!',
-                image: '📖',
-                date: new Date(Date.now() - 86400000).toISOString(),
-                pinned: false
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
             }
-        ];
-        saveNews(defaultNews);
-        return defaultNews;
-    }
-    try {
-        return JSON.parse(news);
+        });
+        return await response.json();
     } catch (e) {
+        console.error('Ошибка загрузки пользователей:', e);
         return [];
     }
 }
 
-function saveNews(news) {
-    localStorage.setItem(NEWS_KEY, JSON.stringify(news));
-}
-
-function addNews(title, content, image = '📰', isPinned = false) {
-    console.log('📰 Добавление новости:', title);
-    
-    const news = getNews();
-    const newNews = {
-        id: Date.now(),
-        title: title,
-        content: content,
-        image: image,
-        date: new Date().toISOString(),
-        pinned: isPinned
-    };
-    news.unshift(newNews);
-    saveNews(news);
-    
-    console.log('✅ Новость добавлена');
-    return newNews;
-}
-
-function deleteNews(newsId) {
-    console.log('🗑 Удаление новости:', newsId);
-    
-    const news = getNews();
-    const filtered = news.filter(n => n.id !== newsId);
-    saveNews(filtered);
-    
-    console.log('✅ Новость удалена');
-    return true;
-}
-
-function updateNewsPinned(newsId, isPinned) {
-    console.log('📌 Изменение закрепления новости:', newsId, isPinned);
-    
-    const news = getNews();
-    const newsItem = news.find(n => n.id === newsId);
-    if (newsItem) {
-        newsItem.pinned = isPinned;
-        saveNews(news);
-        console.log('✅ Статус закрепления изменён');
-    }
-}
-
-// ========== АВТОРИЗАЦИЯ ПОЛЬЗОВАТЕЛЕЙ ==========
-function registerUser(username, password) {
-    console.log('📝 Регистрация пользователя:', username);
-    
-    if (!username || username.length < 3) {
-        return { success: false, message: 'Имя пользователя должно быть не менее 3 символов!' };
-    }
-    
-    if (!password || password.length < 4) {
-        return { success: false, message: 'Пароль должен быть не менее 4 символов!' };
-    }
-    
-    const usernameRegex = /^[a-zA-Z0-9_]+$/;
-    if (!usernameRegex.test(username)) {
-        return { success: false, message: 'Имя пользователя может содержать только латиницу, цифры и подчёркивание!' };
-    }
-    
-    // Проверка на бан
-    const ban = isUserBanned(username);
-    if (ban) {
-        const untilText = ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда';
-        return { success: false, message: `Ваш аккаунт забанен${untilText}. Причина: ${ban.reason}` };
-    }
-    
-    const users = getUsers();
-    const userExists = users.some(u => u.username && u.username.toLowerCase() === username.toLowerCase());
-    
-    if (userExists) {
-        return { success: false, message: 'Пользователь с таким именем уже существует!' };
-    }
-    
-    const cookie = generateCookie();
-    const newUser = {
-        username: username,
-        password: hashPassword(password),
-        cookie: cookie,
-        role: 'user',
-        created: new Date().toISOString(),
-        isBanned: false,
-        banUntil: null
-    };
-    
-    users.push(newUser);
-    saveUsers(users);
-    
-    console.log('✅ Пользователь зарегистрирован:', newUser);
-    return { success: true, cookie: cookie, message: 'Регистрация успешна!' };
-}
-
-function loginUser(username, password) {
-    console.log('🔐 Попытка входа по паролю:', username);
-    
-    // Проверка на бан
-    const ban = isUserBanned(username);
-    if (ban) {
-        const untilText = ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда';
-        return { success: false, message: `Ваш аккаунт забанен${untilText}. Причина: ${ban.reason}` };
-    }
-    
-    const users = getUsers();
-    const passwordHash = hashPassword(password);
-    const user = users.find(u => u.username === username && u.password === passwordHash);
-    
-    if (user) {
-        console.log('✅ Вход успешен для:', username);
-        return { success: true, username: user.username, role: user.role, cookie: user.cookie };
-    }
-    
-    console.log('❌ Неверный пароль для:', username);
-    return { success: false, message: 'Неверное имя пользователя или пароль!' };
-}
-
-function loginByCookie(cookie) {
-    console.log('🔐 Попытка входа по Cookie:', cookie);
-    
-    const users = getUsers();
-    console.log('📋 Всего пользователей:', users.length);
-    
-    const user = users.find(u => u.cookie === cookie);
-    
-    if (user) {
-        console.log('✅ Пользователь найден:', user.username);
-        
-        const ban = isUserBanned(user.username);
-        if (ban) {
-            console.log('❌ Пользователь забанен');
-            return { success: false, message: `Аккаунт забанен` };
-        }
-        
-        console.log('✅ Вход по Cookie успешен');
-        return { success: true, username: user.username, role: user.role, cookie: user.cookie };
-    }
-    
-    console.log('❌ Пользователь с таким Cookie не найден');
-    return { success: false };
-}
-
-function getCurrentUser() {
-    const user = localStorage.getItem(CURRENT_USER_KEY);
-    if (!user) return null;
+async function getUserByCookie(cookie) {
     try {
-        return JSON.parse(user);
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&cookie=eq.${cookie}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        const users = await response.json();
+        return users[0] || null;
     } catch (e) {
+        console.error('Ошибка поиска пользователя:', e);
         return null;
     }
 }
 
+async function getUserByUsername(username) {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&username=eq.${username}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        const users = await response.json();
+        return users[0] || null;
+    } catch (e) {
+        console.error('Ошибка поиска пользователя:', e);
+        return null;
+    }
+}
+
+async function createUser(username, password, cookie, role = 'user') {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+                username: username,
+                password: hashPassword(password),
+                cookie: cookie,
+                role: role
+            })
+        });
+        return await response.json();
+    } catch (e) {
+        console.error('Ошибка создания пользователя:', e);
+        return null;
+    }
+}
+
+// ========== РАБОТА С ЗАЯВКАМИ ==========
+async function getRequests() {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/requests?select=*&order=created_at.desc`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        return await response.json();
+    } catch (e) {
+        console.error('Ошибка загрузки заявок:', e);
+        return [];
+    }
+}
+
+async function createRequest(username, password) {
+    try {
+        // Проверяем, нет ли уже пользователя
+        const existingUser = await getUserByUsername(username);
+        if (existingUser) {
+            return { success: false, message: 'Пользователь с таким именем уже существует!' };
+        }
+        
+        // Проверяем, нет ли уже заявки
+        const requests = await getRequests();
+        if (requests.some(r => r.username === username && r.status === 'pending')) {
+            return { success: false, message: 'Заявка от этого пользователя уже существует!' };
+        }
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/requests`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                password: hashPassword(password),
+                status: 'pending'
+            })
+        });
+        
+        if (response.ok) {
+            return { success: true, message: 'Заявка отправлена на рассмотрение!' };
+        } else {
+            return { success: false, message: 'Ошибка при отправке заявки!' };
+        }
+    } catch (e) {
+        console.error('Ошибка создания заявки:', e);
+        return { success: false, message: 'Ошибка подключения к серверу!' };
+    }
+}
+
+async function approveRequest(requestId, adminName) {
+    try {
+        // Получаем заявку
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/requests?id=eq.${requestId}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        const requests = await response.json();
+        const request = requests[0];
+        
+        if (!request || request.status !== 'pending') {
+            return false;
+        }
+        
+        // Создаём пользователя
+        const cookie = generateCookie();
+        await createUser(request.username, request.password, cookie, 'user');
+        
+        // Обновляем статус заявки
+        await fetch(`${SUPABASE_URL}/rest/v1/requests?id=eq.${requestId}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status: 'approved',
+                reviewed_by: adminName,
+                reviewed_at: new Date().toISOString()
+            })
+        });
+        
+        return true;
+    } catch (e) {
+        console.error('Ошибка одобрения заявки:', e);
+        return false;
+    }
+}
+
+async function denyRequest(requestId, adminName) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/requests?id=eq.${requestId}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status: 'denied',
+                reviewed_by: adminName,
+                reviewed_at: new Date().toISOString()
+            })
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка отклонения заявки:', e);
+        return false;
+    }
+}
+
+// ========== АВТОРИЗАЦИЯ ==========
+async function loginUser(username, password) {
+    const user = await getUserByUsername(username);
+    if (user && user.password === hashPassword(password) && !user.is_banned) {
+        return { success: true, username: user.username, role: user.role, cookie: user.cookie };
+    }
+    return { success: false, message: 'Неверное имя пользователя или пароль!' };
+}
+
+async function loginByCookie(cookie) {
+    const user = await getUserByCookie(cookie);
+    if (user && !user.is_banned) {
+        return { success: true, username: user.username, role: user.role, cookie: user.cookie };
+    }
+    return { success: false };
+}
+
+// ========== НОВОСТИ ==========
+async function getNews() {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/news?select=*&order=date.desc`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        return await response.json();
+    } catch (e) {
+        console.error('Ошибка загрузки новостей:', e);
+        return [];
+    }
+}
+
+async function addNews(title, content, image = '📰', pinned = false) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/news`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: title,
+                content: content,
+                image: image,
+                pinned: pinned
+            })
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка добавления новости:', e);
+        return false;
+    }
+}
+
+async function deleteNews(newsId) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/news?id=eq.${newsId}`, {
+            method: 'DELETE',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка удаления новости:', e);
+        return false;
+    }
+}
+
+async function updateNewsPinned(newsId, pinned) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/news?id=eq.${newsId}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ pinned: pinned })
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка обновления новости:', e);
+        return false;
+    }
+}
+
+// ========== БАНЫ ==========
+async function isUserBanned(username) {
+    const user = await getUserByUsername(username);
+    if (user && user.is_banned) {
+        if (user.ban_until && new Date(user.ban_until) < new Date()) {
+            // Бан истёк
+            return null;
+        }
+        return { reason: user.ban_reason, until: user.ban_until };
+    }
+    return null;
+}
+
+async function banUser(username, reason, durationHours, adminName) {
+    try {
+        const until = durationHours ? new Date(Date.now() + durationHours * 3600000).toISOString() : null;
+        await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${username}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                is_banned: true,
+                ban_reason: reason,
+                ban_until: until
+            })
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка бана:', e);
+        return false;
+    }
+}
+
+async function unbanUser(username) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${username}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                is_banned: false,
+                ban_reason: null,
+                ban_until: null
+            })
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка разбана:', e);
+        return false;
+    }
+}
+
+// ========== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ==========
+async function getAllUsers() {
+    return await getUsers();
+}
+
+async function deleteUser(username) {
+    if (ADMIN_USERNAMES.includes(username)) {
+        return false;
+    }
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${username}`, {
+            method: 'DELETE',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка удаления:', e);
+        return false;
+    }
+}
+
+async function changeUserRole(username, newRole) {
+    if (ADMIN_USERNAMES.includes(username)) {
+        return false;
+    }
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/users?username=eq.${username}`, {
+            method: 'PATCH',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ role: newRole })
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка изменения роли:', e);
+        return false;
+    }
+}
+
+// ========== СЕССИЯ ==========
+let currentSessionUser = null;
+
+function getCurrentUser() {
+    const userJson = localStorage.getItem(CURRENT_USER_KEY);
+    if (userJson) {
+        try {
+            return JSON.parse(userJson);
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+}
+
 function saveCurrentUser(user) {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    console.log('💾 Текущий пользователь сохранён:', user.username);
+    currentSessionUser = user;
 }
 
 function clearCurrentUser() {
     localStorage.removeItem(CURRENT_USER_KEY);
-    console.log('👤 Текущий пользователь очищен');
+    currentSessionUser = null;
 }
 
-function logout() {
-    console.log('🚪 Выход из аккаунта');
-    clearCurrentUser();
-    window.location.href = '/robloexauth/login.html';
-}
-
-function checkAuth() {
-    console.log('🔍 Проверка авторизации...');
-    
-    const user = getCurrentUser();
-    if (user && user.cookie) {
-        console.log('Найден сохранённый пользователь:', user.username);
-        
-        const verified = loginByCookie(user.cookie);
-        if (verified.success) {
-            console.log('✅ Авторизация подтверждена');
-            return verified;
+async function checkAuth() {
+    const savedUser = getCurrentUser();
+    if (savedUser && savedUser.cookie) {
+        const result = await loginByCookie(savedUser.cookie);
+        if (result.success) {
+            return result;
         } else {
-            console.log('❌ Cookie недействителен, очищаем');
             clearCurrentUser();
             return null;
         }
     }
-    
-    console.log('❌ Пользователь не авторизован');
     return null;
 }
 
-// ========== АДМИН-ФУНКЦИИ ==========
+function logout() {
+    clearCurrentUser();
+    window.location.href = '/robloexauth/login.html';
+}
+
 function isAdmin() {
     const user = getCurrentUser();
-    const isAdminUser = user && ADMIN_USERNAMES.includes(user.username);
-    console.log('👑 Проверка прав администратора:', isAdminUser);
-    return isAdminUser;
-}
-
-function getAllUsers() {
-    return getUsers();
-}
-
-function deleteUser(username) {
-    console.log('🗑 Удаление пользователя:', username);
-    
-    if (ADMIN_USERNAMES.includes(username)) {
-        console.log('❌ Нельзя удалить системного администратора');
-        return false;
-    }
-    
-    let users = getUsers();
-    users = users.filter(u => u.username !== username);
-    saveUsers(users);
-    deleteSkin(username);
-    
-    console.log('✅ Пользователь удалён');
-    return true;
-}
-
-function changeUserRole(username, newRole) {
-    console.log('🔄 Изменение роли пользователя:', username, 'на', newRole);
-    
-    const users = getUsers();
-    const user = users.find(u => u.username === username);
-    
-    if (user && !ADMIN_USERNAMES.includes(username)) {
-        user.role = newRole;
-        saveUsers(users);
-        console.log('✅ Роль изменена');
-        return true;
-    }
-    
-    console.log('❌ Нельзя изменить роль системного администратора');
-    return false;
-}
-
-// ========== РАБОТА СО СКИНАМИ ==========
-function saveSkin(username, skinDataUrl) {
-    console.log('🎨 Сохранение скина для:', username);
-    
-    const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
-    skins[username] = skinDataUrl;
-    localStorage.setItem(SKINS_STORAGE_KEY, JSON.stringify(skins));
-    
-    console.log('✅ Скин сохранён');
-}
-
-function getSkin(username) {
-    const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
-    return skins[username] || null;
-}
-
-function deleteSkin(username) {
-    console.log('🗑 Удаление скина для:', username);
-    
-    const skins = JSON.parse(localStorage.getItem(SKINS_STORAGE_KEY) || '{}');
-    delete skins[username];
-    localStorage.setItem(SKINS_STORAGE_KEY, JSON.stringify(skins));
-    
-    console.log('✅ Скин удалён');
-}
-
-function uploadSkin(file, callback) {
-    if (!file) return;
-    
-    if (!file.type.match('image/png')) {
-        showToast('Пожалуйста, выберите PNG файл!', 'error');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            if ((img.width === 64 && img.height === 64) || (img.width === 64 && img.height === 32)) {
-                callback(e.target.result);
-            } else {
-                showToast('Неверный размер! Поддерживаются 64x64 или 64x32 пикселей.', 'error');
-            }
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-}
-
-// ========== ОТЛАДОЧНЫЕ ФУНКЦИИ ==========
-function debugPrintUsers() {
-    const users = getUsers();
-    console.log('📋 Список пользователей:');
-    users.forEach((u, i) => {
-        console.log(`  ${i + 1}. ${u.username} (${u.role}) - Cookie: ${u.cookie ? u.cookie.substring(0, 20) + '...' : 'Нет'}`);
-    });
-}
-
-function debugPrintRequests() {
-    const requests = getRequests();
-    console.log('📋 Список заявок:');
-    requests.forEach((r, i) => {
-        console.log(`  ${i + 1}. ${r.username} - статус: ${r.status}`);
-    });
-}
-
-function debugPrintBans() {
-    const bans = getBans();
-    console.log('📋 Список банов:');
-    bans.forEach((b, i) => {
-        console.log(`  ${i + 1}. ${b.username} - до: ${b.until || 'навсегда'} - причина: ${b.reason}`);
-    });
-}
-
-function debugPrintNews() {
-    const news = getNews();
-    console.log('📋 Список новостей:');
-    news.forEach((n, i) => {
-        console.log(`  ${i + 1}. ${n.title} - закреплена: ${n.pinned}`);
-    });
-}
-
-function debugClearAllData() {
-    if (confirm('⚠️ Это удалит ВСЕХ пользователей, заявки, баны и новости! Продолжить?')) {
-        localStorage.removeItem(STORAGE_KEY);
-        localStorage.removeItem(REQUESTS_KEY);
-        localStorage.removeItem(BANS_KEY);
-        localStorage.removeItem(NEWS_KEY);
-        localStorage.removeItem(CURRENT_USER_KEY);
-        localStorage.removeItem(SKINS_STORAGE_KEY);
-        console.log('✅ Все данные очищены');
-        showToast('Все данные очищены! Перезагрузите страницу.', 'success');
-        setTimeout(() => window.location.reload(), 1500);
-    }
+    return user && ADMIN_USERNAMES.includes(user.username);
 }
 
 // ========== ПЕРЕНАПРАВЛЕНИЯ ==========
@@ -619,6 +508,73 @@ function redirectToAdmin() {
     window.location.href = '/robloexauth/admin.html';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ ДЛЯ ОТЛАДКИ ==========
-console.log('📦 auth.js загружен');
-console.log('👥 Список администраторов:', ADMIN_USERNAMES);
+// ========== СКИНЫ ==========
+async function saveSkin(username, skinDataUrl) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/skins`, {
+            method: 'UPSERT',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                skin_data: skinDataUrl,
+                updated_at: new Date().toISOString()
+            })
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка сохранения скина:', e);
+        return false;
+    }
+}
+
+async function getSkin(username) {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/skins?select=skin_data&username=eq.${username}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        const data = await response.json();
+        return data[0]?.skin_data || null;
+    } catch (e) {
+        console.error('Ошибка загрузки скина:', e);
+        return null;
+    }
+}
+
+async function deleteSkin(username) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/skins?username=eq.${username}`, {
+            method: 'DELETE',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        return true;
+    } catch (e) {
+        console.error('Ошибка удаления скина:', e);
+        return false;
+    }
+}
+
+// ========== ОТЛАДКА ==========
+async function debugPrintUsers() {
+    const users = await getUsers();
+    console.log('📋 Список пользователей:', users);
+}
+
+async function debugPrintRequests() {
+    const requests = await getRequests();
+    console.log('📋 Список заявок:', requests);
+}
+
+async function debugPrintNews() {
+    const news = await getNews();
+    console.log('📋 Список новостей:', news);
+}
