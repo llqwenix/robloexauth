@@ -4,59 +4,141 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robloex - Вход</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{
+            background:linear-gradient(135deg,#0a0f0a 0%,#0a2e0a 50%,#0a0f0a 100%);
+            font-family:Arial,sans-serif;
+            min-height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            padding:20px
+        }
+        .card{
+            background:rgba(10,30,10,0.95);
+            border-radius:20px;
+            padding:40px;
+            width:100%;
+            max-width:400px;
+            border:1px solid #00ff88
+        }
+        h1{color:#00ff88;text-align:center;margin-bottom:30px}
+        input{
+            width:100%;
+            padding:12px;
+            margin:10px 0;
+            background:#0a1a0a;
+            border:1px solid #00aa44;
+            border-radius:10px;
+            color:#00ff88;
+            font-size:14px
+        }
+        button{
+            width:100%;
+            padding:12px;
+            background:#0a4d0a;
+            border:none;
+            border-radius:10px;
+            color:white;
+            font-size:16px;
+            cursor:pointer;
+            margin-top:20px
+        }
+        button:hover{background:#00aa44}
+        .message{
+            padding:10px;
+            border-radius:8px;
+            text-align:center;
+            margin-top:15px;
+            display:none
+        }
+        .success{background:rgba(0,255,136,0.2);border:1px solid #00ff88;color:#00ff88;display:block}
+        .error{background:rgba(255,68,68,0.2);border:1px solid #ff4444;color:#ff8888;display:block}
+        .footer{text-align:center;margin-top:20px;color:#008844;font-size:12px}
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="glass-card login-card">
-            <div class="card-header">🔐 ВХОД В АККАУНТ</div>
-            
-            <div class="form-group">
-                <label>ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
-                <input type="text" id="username" placeholder="Введите имя пользователя">
-            </div>
-            <div class="form-group">
-                <label>ПАРОЛЬ</label>
-                <input type="password" id="password" placeholder="Введите пароль">
-            </div>
-            <button class="btn-primary" onclick="login()">ВОЙТИ</button>
-            
-            <div class="auth-footer">
-                Нет аккаунта? <a href="signup.html">ЗАРЕГИСТРИРОВАТЬСЯ</a>
-            </div>
-        </div>
-        <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
+    <div class="card">
+        <h1>🔐 ВХОД</h1>
+        <input type="text" id="username" placeholder="Имя пользователя">
+        <input type="password" id="password" placeholder="Пароль">
+        <button onclick="doLogin()">ВОЙТИ</button>
+        <div id="message" class="message"></div>
+        <div class="footer">© 2024 Robloex Launcher</div>
     </div>
-    
-    <div id="toast" class="toast"></div>
-    
-    <script src="auth.js"></script>
+
     <script>
-        function login() {
+        const SPREADSHEET_ID = '17dPJNS4c_eZZwWMHLrvvBwiv5N8cvQsl1yp9tl4eZ2c';
+        const API_KEY = 'AIzaSyB1BBzMEXEQ-tU30RfgPB16biw08GkjXVk';
+        
+        function hashPassword(password) {
+            let hash = 0;
+            for (let i = 0; i < password.length; i++) {
+                const char = password.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0;
+            }
+            return btoa(hash.toString() + password).slice(0, 64);
+        }
+        
+        async function getUsers() {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Лист1!A:H?key=${API_KEY}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.values && data.values.length > 1) {
+                    const headers = data.values[0];
+                    return data.values.slice(1).map(row => {
+                        const obj = {};
+                        headers.forEach((h, i) => obj[h] = row[i] || '');
+                        return obj;
+                    });
+                }
+                return [];
+            } catch(e) {
+                console.error(e);
+                return [];
+            }
+        }
+        
+        async function doLogin() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            const msgDiv = document.getElementById('message');
             
             if (!username || !password) {
-                showToast('Введите имя пользователя и пароль!', 'error');
+                msgDiv.textContent = 'Введите имя и пароль!';
+                msgDiv.className = 'message error';
                 return;
             }
             
-            const result = loginUser(username, password);
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ ВХОД...';
             
-            if (result.success) {
-                saveCurrentUser({ username: result.username, role: result.role, cookie: result.cookie });
-                showToast('Вход выполнен! Перенаправление...', 'success');
+            const users = await getUsers();
+            const passwordHash = hashPassword(password);
+            const user = users.find(u => u.username === username && u.password === passwordHash);
+            
+            if (user) {
+                msgDiv.textContent = '✅ Вход выполнен!';
+                msgDiv.className = 'message success';
+                localStorage.setItem('robloex_user', JSON.stringify(user));
                 setTimeout(() => {
                     window.location.href = 'home.html';
                 }, 1000);
             } else {
-                showToast(result.message, 'error');
+                msgDiv.textContent = '❌ Неверное имя или пароль!';
+                msgDiv.className = 'message error';
+                btn.disabled = false;
+                btn.textContent = 'ВОЙТИ';
             }
         }
         
-        // Если уже залогинены, перенаправляем
-        const currentUser = getCurrentUser();
-        if (currentUser) {
+        // Проверяем сохранённого пользователя
+        const savedUser = localStorage.getItem('robloex_user');
+        if (savedUser) {
             window.location.href = 'home.html';
         }
     </script>
