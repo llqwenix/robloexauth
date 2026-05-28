@@ -94,6 +94,11 @@
             text-align: center;
             padding: 50px;
         }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #00aa66;
+        }
     </style>
 </head>
 <body>
@@ -109,7 +114,7 @@
         </nav>
         
         <div id="adminContent">
-            <!-- Содержимое загружается через JS -->
+            <div class="loading">Загрузка...</div>
         </div>
         
         <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
@@ -140,8 +145,11 @@
             if (tabName === 'news') loadNews();
         }
         
-        function loadAdminPanel() {
-            const user = checkAuth();
+        async function loadAdminPanel() {
+            console.log('Загрузка admin.html...');
+            
+            const user = await checkAuth();
+            console.log('Пользователь:', user);
             
             if (!user || !ADMIN_USERNAMES.includes(user.username)) {
                 document.getElementById('adminContent').innerHTML = `
@@ -179,16 +187,16 @@
                     
                     <div id="requestsTab" class="tab-content active">
                         <h3 style="color: #00ff88; margin-bottom: 15px;">Новые заявки</h3>
-                        <div id="pendingRequestsList"></div>
+                        <div id="pendingRequestsList"><div class="loading">Загрузка...</div></div>
                         <h3 style="color: #00ff88; margin-top: 30px; margin-bottom: 15px;">Обработанные заявки</h3>
-                        <div id="processedRequestsList"></div>
+                        <div id="processedRequestsList"><div class="loading">Загрузка...</div></div>
                     </div>
                     
                     <div id="usersTab" class="tab-content">
                         <div class="form-group">
                             <input type="text" id="searchUser" placeholder="Поиск пользователя..." onkeyup="filterUsers()">
                         </div>
-                        <div id="usersList"></div>
+                        <div id="usersList"><div class="loading">Загрузка...</div></div>
                     </div>
                     
                     <div id="bansTab" class="tab-content">
@@ -209,7 +217,7 @@
                             </div>
                         </div>
                         <h3 style="color: #00ff88; margin-bottom: 15px;">Активные баны</h3>
-                        <div id="activeBansList"></div>
+                        <div id="activeBansList"><div class="loading">Загрузка...</div></div>
                     </div>
                     
                     <div id="newsTab" class="tab-content">
@@ -230,16 +238,16 @@
                             <button class="btn-primary" onclick="addNewsFromUI()" style="width: auto; padding: 10px 20px;">➕ ОПУБЛИКОВАТЬ</button>
                         </div>
                         <h3 style="color: #00ff88; margin-bottom: 15px;">Все новости</h3>
-                        <div id="newsList"></div>
+                        <div id="newsList"><div class="loading">Загрузка...</div></div>
                     </div>
                 </div>
             `;
             
-            loadRequests();
+            await loadRequests();
         }
         
-        function loadRequests() {
-            const requests = getRequests();
+        async function loadRequests() {
+            const requests = await getRequests();
             const pending = requests.filter(r => r.status === 'pending');
             const processed = requests.filter(r => r.status !== 'pending');
             
@@ -252,7 +260,7 @@
                 pendingContainer.innerHTML = pending.map(req => `
                     <div class="request-card">
                         <p><strong>👤 ${escapeHtml(req.username)}</strong></p>
-                        <p>📅 ${new Date(req.createdAt).toLocaleString()}</p>
+                        <p>📅 ${new Date(req.created_at).toLocaleString()}</p>
                         <div style="margin-top: 10px;">
                             <button class="btn-approve" onclick="handleApproveRequest(${req.id})">✅ ОДОБРИТЬ</button>
                             <button class="btn-deny" onclick="handleDenyRequest(${req.id})">❌ ОТКЛОНИТЬ</button>
@@ -267,79 +275,39 @@
                 processedContainer.innerHTML = processed.map(req => `
                     <div class="request-card">
                         <p><strong>👤 ${escapeHtml(req.username)}</strong></p>
-                        <p>📅 ${new Date(req.createdAt).toLocaleString()}</p>
+                        <p>📅 ${new Date(req.created_at).toLocaleString()}</p>
                         <p>Статус: <span class="badge-${req.status}">${req.status === 'approved' ? '✅ ОДОБРЕНА' : '❌ ОТКЛОНЕНА'}</span></p>
-                        <p>Рассмотрено: ${req.reviewedBy} - ${new Date(req.reviewedAt).toLocaleString()}</p>
+                        <p>Рассмотрено: ${req.reviewed_by} - ${new Date(req.reviewed_at).toLocaleString()}</p>
                     </div>
                 `).join('');
             }
         }
         
-        function handleApproveRequest(requestId) {
+        async function handleApproveRequest(requestId) {
             console.log('✅ Одобрение заявки:', requestId);
             
-            const requests = getRequests();
-            const request = requests.find(r => r.id === requestId);
-            
-            if (!request) {
-                showToast('Заявка не найдена!', 'error');
-                return;
+            if (await approveRequest(requestId, currentAdmin.username)) {
+                showToast('Заявка одобрена! Пользователь создан.', 'success');
+                await loadRequests();
+                await loadUsers();
+            } else {
+                showToast('Ошибка при одобрении заявки', 'error');
             }
-            
-            if (request.status !== 'pending') {
-                showToast('Заявка уже обработана!', 'error');
-                return;
-            }
-            
-            // Создаём пользователя
-            const users = getUsers();
-            const cookie = generateCookie();
-            
-            const newUser = {
-                username: request.username,
-                password: request.password,
-                cookie: cookie,
-                role: 'user',
-                created: new Date().toISOString()
-            };
-            
-            users.push(newUser);
-            saveUsers(users);
-            console.log('✅ Пользователь создан:', newUser);
-            
-            // Обновляем статус заявки
-            request.status = 'approved';
-            request.reviewedBy = currentAdmin.username;
-            request.reviewedAt = new Date().toISOString();
-            saveRequests(requests);
-            
-            showToast(`Пользователь ${request.username} создан! Cookie: ${cookie}`, 'success');
-            loadRequests();
-            loadUsers();
         }
         
-        function handleDenyRequest(requestId) {
+        async function handleDenyRequest(requestId) {
             console.log('❌ Отклонение заявки:', requestId);
             
-            const requests = getRequests();
-            const request = requests.find(r => r.id === requestId);
-            
-            if (!request) {
-                showToast('Заявка не найдена!', 'error');
-                return;
+            if (await denyRequest(requestId, currentAdmin.username)) {
+                showToast('Заявка отклонена', 'success');
+                await loadRequests();
+            } else {
+                showToast('Ошибка при отклонении заявки', 'error');
             }
-            
-            request.status = 'denied';
-            request.reviewedBy = currentAdmin.username;
-            request.reviewedAt = new Date().toISOString();
-            saveRequests(requests);
-            
-            showToast(`Заявка ${request.username} отклонена`, 'success');
-            loadRequests();
         }
         
-        function loadUsers() {
-            const users = getAllUsers();
+        async function loadUsers() {
+            const users = await getAllUsers();
             const container = document.getElementById('usersList');
             
             if (users.length === 0) {
@@ -348,17 +316,15 @@
             }
             
             container.innerHTML = users.map(user => {
-                const ban = isUserBanned(user.username);
-                const isAdminUser = ADMIN_USERNAMES.includes(user.username);
                 return `
                     <div class="user-card">
-                        <p><strong>👤 ${escapeHtml(user.username)}</strong> ${isAdminUser ? '<span class="admin-badge">АДМИНИСТРАТОР</span>' : ''}</p>
+                        <p><strong>👤 ${escapeHtml(user.username)}</strong> ${ADMIN_USERNAMES.includes(user.username) ? '<span class="admin-badge">АДМИНИСТРАТОР</span>' : ''}</p>
                         <p>Роль: ${user.role === 'admin' ? '👑 Администратор' : '👤 Пользователь'}</p>
                         <p>📅 Создан: ${new Date(user.created).toLocaleDateString()}</p>
                         <p>🔑 Cookie: <span style="font-family: monospace; font-size: 10px;">${user.cookie ? user.cookie.substring(0, 20) + '...' : 'Нет'}</span></p>
-                        ${ban ? `<p style="color: #e74c3c;">🚫 Забанен${ban.until ? ` до ${new Date(ban.until).toLocaleString()}` : ' навсегда'}</p>` : ''}
+                        ${user.is_banned ? `<p style="color: #e74c3c;">🚫 Забанен${user.ban_until ? ` до ${new Date(user.ban_until).toLocaleString()}` : ' навсегда'}</p>` : ''}
                         <div style="margin-top: 10px;">
-                            ${!isAdminUser ? `
+                            ${!ADMIN_USERNAMES.includes(user.username) ? `
                                 <select id="role-${user.username}" onchange="changeRole('${user.username}', this.value)">
                                     <option value="user" ${user.role === 'user' ? 'selected' : ''}>Пользователь</option>
                                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Администратор</option>
@@ -371,33 +337,29 @@
             }).join('');
         }
         
-        function changeRole(username, newRole) {
+        async function changeRole(username, newRole) {
             if (ADMIN_USERNAMES.includes(username)) {
                 showToast('Нельзя изменить роль системного администратора!', 'error');
-                const user = getAllUsers().find(u => u.username === username);
-                if (document.getElementById(`role-${username}`)) {
-                    document.getElementById(`role-${username}`).value = user.role;
-                }
                 return;
             }
-            if (changeUserRole(username, newRole)) {
+            if (await changeUserRole(username, newRole)) {
                 showToast(`Роль пользователя ${username} изменена`, 'success');
-                loadUsers();
+                await loadUsers();
             } else {
                 showToast('Ошибка изменения роли', 'error');
             }
         }
         
-        function deleteUserAccount(username) {
+        async function deleteUserAccount(username) {
             if (ADMIN_USERNAMES.includes(username)) {
                 showToast('Нельзя удалить системного администратора!', 'error');
                 return;
             }
             if (confirm(`Удалить пользователя ${username}?`)) {
-                if (deleteUser(username)) {
+                if (await deleteUser(username)) {
                     showToast(`Пользователь ${username} удалён`, 'success');
-                    loadUsers();
-                    loadBans();
+                    await loadUsers();
+                    await loadBans();
                 } else {
                     showToast('Ошибка удаления', 'error');
                 }
@@ -413,28 +375,27 @@
             });
         }
         
-        function loadBans() {
-            const bans = getBans();
-            const activeBans = bans.filter(b => !b.until || new Date(b.until) > new Date());
+        async function loadBans() {
+            const users = await getAllUsers();
+            const bannedUsers = users.filter(u => u.is_banned);
             const container = document.getElementById('activeBansList');
             
-            if (activeBans.length === 0) {
+            if (bannedUsers.length === 0) {
                 container.innerHTML = '<p style="color: #00aa66;">Нет активных банов</p>';
                 return;
             }
             
-            container.innerHTML = activeBans.map(ban => `
+            container.innerHTML = bannedUsers.map(user => `
                 <div class="user-card">
-                    <p><strong>👤 ${escapeHtml(ban.username)}</strong></p>
-                    <p>Причина: ${escapeHtml(ban.reason)}</p>
-                    <p>До: ${ban.until ? new Date(ban.until).toLocaleString() : 'Навсегда'}</p>
-                    <p>Забанил: ${ban.createdBy} - ${new Date(ban.createdAt).toLocaleString()}</p>
-                    <button class="btn-unban" onclick="unbanUserAccount('${ban.username}')">🔓 РАЗБАНИТЬ</button>
+                    <p><strong>👤 ${escapeHtml(user.username)}</strong></p>
+                    <p>Причина: ${escapeHtml(user.ban_reason)}</p>
+                    <p>До: ${user.ban_until ? new Date(user.ban_until).toLocaleString() : 'Навсегда'}</p>
+                    <button class="btn-unban" onclick="unbanUserAccount('${user.username}')">🔓 РАЗБАНИТЬ</button>
                 </div>
             `).join('');
         }
         
-        function banUserFromUI() {
+        async function banUserFromUI() {
             const username = document.getElementById('banUsername').value.trim();
             const reason = document.getElementById('banReason').value.trim();
             const duration = parseInt(document.getElementById('banDuration').value);
@@ -449,29 +410,29 @@
                 return;
             }
             
-            if (banUser(username, reason, duration, currentAdmin.username)) {
+            if (await banUser(username, reason, duration, currentAdmin.username)) {
                 showToast(`Пользователь ${username} забанен`, 'success');
                 document.getElementById('banUsername').value = '';
                 document.getElementById('banReason').value = '';
-                loadBans();
-                loadUsers();
+                await loadBans();
+                await loadUsers();
             } else {
                 showToast('Ошибка при бане', 'error');
             }
         }
         
-        function unbanUserAccount(username) {
-            if (unbanUser(username)) {
+        async function unbanUserAccount(username) {
+            if (await unbanUser(username)) {
                 showToast(`Пользователь ${username} разбанен`, 'success');
-                loadBans();
-                loadUsers();
+                await loadBans();
+                await loadUsers();
             } else {
                 showToast('Ошибка при разбане', 'error');
             }
         }
         
-        function loadNews() {
-            const news = getNews();
+        async function loadNews() {
+            const news = await getNews();
             const container = document.getElementById('newsList');
             
             if (news.length === 0) {
@@ -494,7 +455,7 @@
             `).join('');
         }
         
-        function addNewsFromUI() {
+        async function addNewsFromUI() {
             const title = document.getElementById('newsTitle').value.trim();
             const content = document.getElementById('newsContent').value.trim();
             const image = document.getElementById('newsImage').value.trim() || '📰';
@@ -505,7 +466,7 @@
                 return;
             }
             
-            addNews(title, content, image, pinned);
+            await addNews(title, content, image, pinned);
             showToast('Новость добавлена!', 'success');
             
             document.getElementById('newsTitle').value = '';
@@ -513,19 +474,19 @@
             document.getElementById('newsImage').value = '';
             document.getElementById('newsPinned').checked = false;
             
-            loadNews();
+            await loadNews();
         }
         
-        function togglePinNews(newsId, isPinned) {
-            updateNewsPinned(newsId, isPinned);
-            loadNews();
+        async function togglePinNews(newsId, isPinned) {
+            await updateNewsPinned(newsId, isPinned);
+            await loadNews();
         }
         
-        function deleteNewsItem(newsId) {
+        async function deleteNewsItem(newsId) {
             if (confirm('Удалить новость?')) {
-                deleteNews(newsId);
+                await deleteNews(newsId);
                 showToast('Новость удалена', 'success');
-                loadNews();
+                await loadNews();
             }
         }
         
