@@ -1,8 +1,8 @@
-// auth.js - с подключением к Supabase
+// auth.js - с Google Sheets API
 
-// ========== НАСТРОЙКИ SUPABASE ==========
-const SUPABASE_URL = 'https://zlzcvfrudtyebsdfxelp.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_IPfd3M8WFka9dnWS7Wu-og_8jkIUrfb';
+// ========== НАСТРОЙКИ GOOGLE SHEETS (ВАШИ ДАННЫЕ) ==========
+const SPREADSHEET_ID = '17dPJNS4c_eZZwWMHLrvvBwiv5N8cvQsl1yp9tl4eZ2c';
+const API_KEY = 'AIzaSyB1BBzMEXEQ-tU30RfgPB16biw08GkjXVk';
 
 // ========== НАСТРОЙКИ АДМИНОВ ==========
 const ADMIN_USERNAMES = ['vynzxluf', 'vzxjall'];
@@ -39,73 +39,58 @@ function generateCookie() {
     return [...Array(32)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 }
 
-// ========== ЗАПРОСЫ К SUPABASE ==========
-async function supabaseRequest(endpoint, method = 'GET', body = null) {
-    const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
-    const headers = {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json'
-    };
-    
-    const options = {
-        method: method,
-        headers: headers
-    };
-    
-    if (body) {
-        options.body = JSON.stringify(body);
-    }
-    
+// ========== ЗАПРОСЫ К GOOGLE SHEETS ==========
+async function getSheetData(sheetName = 'Лист1', range = 'A:H') {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${sheetName}!${range}?key=${API_KEY}`;
     try {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-            console.error(`Supabase error ${response.status}:`, await response.text());
-            return null;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.values && data.values.length > 1) {
+            const headers = data.values[0];
+            const rows = data.values.slice(1);
+            return rows.map(row => {
+                const obj = {};
+                headers.forEach((header, i) => {
+                    obj[header] = row[i] || '';
+                });
+                return obj;
+            });
         }
-        return await response.json();
+        return [];
     } catch (e) {
-        console.error('Fetch error:', e);
-        return null;
+        console.error('Ошибка загрузки:', e);
+        return [];
     }
 }
 
 // ========== РАБОТА С ПОЛЬЗОВАТЕЛЯМИ ==========
 async function getUsers() {
-    return await supabaseRequest('users?select=*') || [];
-}
-
-async function getUserByCookie(cookie) {
-    const result = await supabaseRequest(`users?select=*&cookie=eq.${cookie}`);
-    return result && result.length > 0 ? result[0] : null;
+    return await getSheetData('Лист1', 'A:H');
 }
 
 async function getUserByUsername(username) {
-    const result = await supabaseRequest(`users?select=*&username=eq.${username}`);
-    return result && result.length > 0 ? result[0] : null;
+    const users = await getUsers();
+    return users.find(u => u.username === username);
 }
 
-async function getRequests() {
-    return await supabaseRequest('requests?select=*&order=created_at.desc') || [];
-}
-
-async function getNews() {
-    return await supabaseRequest('news?select=*&order=date.desc') || [];
+async function getUserByCookie(cookie) {
+    const users = await getUsers();
+    return users.find(u => u.cookie === cookie);
 }
 
 // ========== АВТОРИЗАЦИЯ ==========
 async function loginUser(username, password) {
     const user = await getUserByUsername(username);
-    if (user && user.password === hashPassword(password) && !user.is_banned) {
-        return { success: true, username: user.username, role: user.role, cookie: user.cookie };
+    if (user && user.password === hashPassword(password) && user.is_banned !== 'TRUE') {
+        return { success: true, username: user.username, role: user.role || 'user', cookie: user.cookie };
     }
     return { success: false, message: 'Неверное имя пользователя или пароль!' };
 }
 
 async function loginByCookie(cookie) {
     const user = await getUserByCookie(cookie);
-    if (user && !user.is_banned) {
-        return { success: true, username: user.username, role: user.role, cookie: user.cookie };
+    if (user && user.is_banned !== 'TRUE') {
+        return { success: true, username: user.username, role: user.role || 'user', cookie: user.cookie };
     }
     return { success: false };
 }
@@ -135,7 +120,6 @@ async function checkAuth() {
     console.log('🔍 Проверка авторизации...');
     const savedUser = getCurrentUser();
     if (savedUser && savedUser.cookie) {
-        console.log('Найден сохранённый cookie:', savedUser.cookie.substring(0, 20) + '...');
         const result = await loginByCookie(savedUser.cookie);
         if (result.success) {
             console.log('✅ Авторизация успешна для:', result.username);
@@ -160,173 +144,26 @@ function isAdmin() {
     return user && ADMIN_USERNAMES.includes(user.username);
 }
 
-// ========== ЗАЯВКИ ==========
-async function createRequest(username, password) {
-    const existingUser = await getUserByUsername(username);
-    if (existingUser) {
-        return { success: false, message: 'Пользователь с таким именем уже существует!' };
-    }
-    
-    const requests = await getRequests();
-    if (requests.some(r => r.username === username && r.status === 'pending')) {
-        return { success: false, message: 'Заявка от этого пользователя уже существует!' };
-    }
-    
-    const result = await supabaseRequest('requests', 'POST', {
-        username: username,
-        password: hashPassword(password),
-        status: 'pending'
-    });
-    
-    if (result) {
-        return { success: true, message: 'Заявка отправлена на рассмотрение!' };
-    }
-    return { success: false, message: 'Ошибка при отправке заявки!' };
-}
-
-async function approveRequest(requestId, adminName) {
-    const request = await supabaseRequest(`requests?id=eq.${requestId}`);
-    if (!request || request.length === 0 || request[0].status !== 'pending') {
-        return false;
-    }
-    
-    const req = request[0];
-    const cookie = generateCookie();
-    
-    // Создаём пользователя
-    const newUser = await supabaseRequest('users', 'POST', {
-        username: req.username,
-        password: req.password,
-        cookie: cookie,
-        role: 'user'
-    });
-    
-    if (!newUser) return false;
-    
-    // Обновляем заявку
-    await supabaseRequest(`requests?id=eq.${requestId}`, 'PATCH', {
-        status: 'approved',
-        reviewed_by: adminName,
-        reviewed_at: new Date().toISOString()
-    });
-    
-    return true;
-}
-
-async function denyRequest(requestId, adminName) {
-    await supabaseRequest(`requests?id=eq.${requestId}`, 'PATCH', {
-        status: 'denied',
-        reviewed_by: adminName,
-        reviewed_at: new Date().toISOString()
-    });
-    return true;
-}
-
 // ========== НОВОСТИ ==========
-async function addNews(title, content, image = '📰', pinned = false) {
-    return await supabaseRequest('news', 'POST', {
-        title: title,
-        content: content,
-        image: image,
-        pinned: pinned
-    });
-}
-
-async function deleteNews(newsId) {
-    return await supabaseRequest(`news?id=eq.${newsId}`, 'DELETE');
-}
-
-async function updateNewsPinned(newsId, pinned) {
-    return await supabaseRequest(`news?id=eq.${newsId}`, 'PATCH', { pinned: pinned });
-}
-
-// ========== БАНЫ ==========
-async function isUserBanned(username) {
-    const user = await getUserByUsername(username);
-    if (user && user.is_banned) {
-        if (user.ban_until && new Date(user.ban_until) < new Date()) {
-            return null;
+async function getNews() {
+    try {
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/News!A:E?key=${API_KEY}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data.values && data.values.length > 1) {
+            return data.values.slice(1).map(row => ({
+                id: row[0],
+                title: row[1],
+                content: row[2],
+                date: row[3],
+                pinned: row[4] === 'TRUE'
+            }));
         }
-        return { reason: user.ban_reason, until: user.ban_until };
+        return [];
+    } catch (e) {
+        console.error('Ошибка загрузки новостей:', e);
+        return [];
     }
-    return null;
-}
-
-async function banUser(username, reason, durationHours, adminName) {
-    const until = durationHours ? new Date(Date.now() + durationHours * 3600000).toISOString() : null;
-    return await supabaseRequest(`users?username=eq.${username}`, 'PATCH', {
-        is_banned: true,
-        ban_reason: reason,
-        ban_until: until
-    });
-}
-
-async function unbanUser(username) {
-    return await supabaseRequest(`users?username=eq.${username}`, 'PATCH', {
-        is_banned: false,
-        ban_reason: null,
-        ban_until: null
-    });
-}
-
-// ========== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ ==========
-async function getAllUsers() {
-    return await getUsers();
-}
-
-async function deleteUser(username) {
-    if (ADMIN_USERNAMES.includes(username)) {
-        return false;
-    }
-    return await supabaseRequest(`users?username=eq.${username}`, 'DELETE');
-}
-
-async function changeUserRole(username, newRole) {
-    if (ADMIN_USERNAMES.includes(username)) {
-        return false;
-    }
-    return await supabaseRequest(`users?username=eq.${username}`, 'PATCH', { role: newRole });
-}
-
-// ========== СКИНЫ ==========
-async function saveSkin(username, skinDataUrl) {
-    return await supabaseRequest('skins', 'UPSERT', {
-        username: username,
-        skin_data: skinDataUrl,
-        updated_at: new Date().toISOString()
-    });
-}
-
-async function getSkin(username) {
-    const result = await supabaseRequest(`skins?select=skin_data&username=eq.${username}`);
-    return result && result.length > 0 ? result[0].skin_data : null;
-}
-
-async function deleteSkin(username) {
-    return await supabaseRequest(`skins?username=eq.${username}`, 'DELETE');
-}
-
-function uploadSkin(file, callback) {
-    if (!file) return;
-    
-    if (!file.type.match('image/png')) {
-        showToast('Пожалуйста, выберите PNG файл!', 'error');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            if ((img.width === 64 && img.height === 64) || (img.width === 64 && img.height === 32)) {
-                callback(e.target.result);
-            } else {
-                showToast('Неверный размер! Поддерживаются 64x64 или 64x32 пикселей.', 'error');
-            }
-        };
-        img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
 }
 
 // ========== ПЕРЕНАПРАВЛЕНИЯ ==========
@@ -346,20 +183,5 @@ function redirectToAdmin() {
     window.location.href = '/robloexauth/admin.html';
 }
 
-// ========== ОТЛАДКА ==========
-async function debugPrintUsers() {
-    const users = await getUsers();
-    console.log('📋 Список пользователей:', users);
-}
-
-async function debugPrintRequests() {
-    const requests = await getRequests();
-    console.log('📋 Список заявок:', requests);
-}
-
-async function debugPrintNews() {
-    const news = await getNews();
-    console.log('📋 Список новостей:', news);
-}
-
 console.log('✅ auth.js загружен');
+console.log('📊 ID таблицы:', SPREADSHEET_ID);
