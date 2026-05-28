@@ -1,8 +1,8 @@
 // auth.js - с подключением к Supabase
 
 // ========== НАСТРОЙКИ SUPABASE ==========
-const SUPABASE_URL = 'https://ВАШ_ПРОЕКТ.supabase.co';  // ЗАМЕНИТЕ НА ВАШ URL
-const SUPABASE_ANON_KEY = 'ВАШ_АННОН_КЛЮЧ';  // ЗАМЕНИТЕ НА ВАШ КЛЮЧ
+const SUPABASE_URL = 'https://zlzcvfrudtyebsdfxelp.supabase.com';  // ЗАМЕНИТЕ НА ВАШ URL
+const SUPABASE_ANON_KEY = 'sb_publishable_IPfd3M8WFka9dnWS7Wu-og_8jkIUrfb';  // ЗАМЕНИТЕ НА ВАШ КЛЮЧ
 
 // ========== НАСТРОЙКИ АДМИНОВ ==========
 const ADMIN_USERNAMES = ['vynzxluf', 'vzxjall'];
