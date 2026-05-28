@@ -1,15 +1,8 @@
-{
-  "users": [
-    {
-      "username": "admin",
-      "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
-      "cookie": "admin_cookie_here",
-      "role": "admin",
-      "created": "2024-01-01T00:00:00.000Z"
-    }
-  ],
-  "settings": {
-    "maintenance": false,
-    "version": "2.0"
+[
+  {
+    "username": "vynzxluf",
+    "cookie": "42e948fa09619cd58890c4228b25b10a",
+    "role": "admin",
+    "created": "2024-01-01T00:00:00.000Z"
   }
-}
+]
