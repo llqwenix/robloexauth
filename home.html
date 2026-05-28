@@ -46,6 +46,11 @@
             font-weight: bold;
             margin-left: 10px;
         }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #00aa66;
+        }
     </style>
 </head>
 <body>
@@ -84,7 +89,9 @@
         
         <div class="glass-card">
             <div class="card-header">📰 ПОСЛЕДНИЕ НОВОСТИ</div>
-            <div id="newsContainer"></div>
+            <div id="newsContainer">
+                <div class="loading">Загрузка новостей...</div>
+            </div>
         </div>
         
         <div class="footer">© 2024 Robloex Launcher | Secure Authentication</div>
@@ -102,16 +109,23 @@
             return div.innerHTML;
         }
         
-        function loadHomePage() {
-            const user = checkAuth();
+        async function loadHomePage() {
+            console.log('Загрузка home.html...');
+            
+            // Проверяем авторизацию
+            const user = await checkAuth();
+            console.log('Результат checkAuth:', user);
             
             if (!user) {
+                console.log('Пользователь не авторизован, перенаправление на login.html');
                 redirectToLogin();
                 return;
             }
             
             currentUserData = user;
+            console.log('Текущий пользователь:', user);
             
+            // Обновляем навбар
             const userInfo = document.getElementById('userInfo');
             const isAdminUser = ADMIN_USERNAMES.includes(user.username);
             
@@ -123,6 +137,7 @@
                 </div>
             `;
             
+            // Показываем ссылку на админ-панель только для администраторов
             const navLinks = document.getElementById('navLinks');
             const existingAdminLink = document.querySelector('.admin-link');
             
@@ -140,18 +155,20 @@
                 }
             }
             
-            loadNewsOnHome();
+            // Загружаем новости
+            await loadNewsOnHome();
         }
         
-        function loadNewsOnHome() {
-            const news = getNews();
+        async function loadNewsOnHome() {
+            const news = await getNews();
             const container = document.getElementById('newsContainer');
             
-            if (news.length === 0) {
+            if (!news || news.length === 0) {
                 container.innerHTML = '<p style="color: #00aa66; text-align: center;">Новостей пока нет</p>';
                 return;
             }
             
+            // Сначала закреплённые, потом остальные
             const sortedNews = [...news].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
             
             container.innerHTML = sortedNews.map(item => `
@@ -163,6 +180,7 @@
             `).join('');
         }
         
+        // Запускаем загрузку страницы
         loadHomePage();
     </script>
 </body>
