@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест Google Sheets</title>
+    <style>
+        body {
+            background: #0a0f0a;
+            color: #00ff88;
+            font-family: monospace;
+            padding: 20px;
+        }
+        pre {
+            background: #0a1a0a;
+            padding: 15px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+        .success { color: #2ecc71; }
+        .error { color: #e74c3c; }
+        button {
+            background: #0a4d0a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        input {
+            background: #0a1a0a;
+            border: 1px solid #00aa44;
+            color: #00ff88;
+            padding: 8px;
+            border-radius: 5px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Тест подключения к Google Sheets</h1>
+    
+    <div>
+        <h3>ID таблицы:</h3>
+        <pre>17dPJNS4c_eZZwWMHLrvvBwiv5N8cvQsl1yp9tl4eZ2c</pre>
+    </div>
+    
+    <div>
+        <h3>Тестовый вход:</h3>
+        <input type="text" id="testUsername" placeholder="Username" value="vynzxluf">
+        <input type="password" id="testPassword" placeholder="Password" value="admin123">
+        <button onclick="testLogin()">🔐 ТЕСТ ВХОДА</button>
+    </div>
+    
+    <div>
+        <h3>Результат:</h3>
+        <pre id="result">Ожидание...</pre>
+    </div>
+    
+    <div>
+        <h3>Все пользователи из таблицы:</h3>
+        <button onclick="loadUsers()">📥 ЗАГРУЗИТЬ ПОЛЬЗОВАТЕЛЕЙ</button>
+        <pre id="usersList">Нажмите кнопку для загрузки...</pre>
+    </div>
+
+    <script>
+        const SPREADSHEET_ID = '17dPJNS4c_eZZwWMHLrvvBwiv5N8cvQsl1yp9tl4eZ2c';
+        const API_KEY = 'AIzaSyB1BBzMEXEQ-tU30RfgPB16biw08GkjXVk';
+        
+        function hashPassword(password) {
+            let hash = 0;
+            for (let i = 0; i < password.length; i++) {
+                const char = password.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash |= 0;
+            }
+            return btoa(hash.toString() + password).slice(0, 64);
+        }
+        
+        async function loadUsers() {
+            const resultDiv = document.getElementById('usersList');
+            resultDiv.innerHTML = 'Загрузка...';
+            
+            try {
+                // Пробуем получить данные из таблицы
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Лист1!A:H?key=${API_KEY}`;
+                console.log('Запрос к:', url);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                console.log('Ответ:', data);
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `❌ Ошибка: ${JSON.stringify(data.error, null, 2)}`;
+                    return;
+                }
+                
+                if (!data.values || data.values.length === 0) {
+                    resultDiv.innerHTML = '❌ Таблица пуста или не найдена';
+                    return;
+                }
+                
+                const headers = data.values[0];
+                const rows = data.values.slice(1);
+                
+                let html = `✅ Найдено ${rows.length} пользователей\n\n`;
+                html += `Заголовки: ${headers.join(' | ')}\n\n`;
+                
+                rows.forEach((row, i) => {
+                    html += `${i+1}. `;
+                    headers.forEach((h, j) => {
+                        html += `${h}: ${row[j] || '(пусто)'} | `;
+                    });
+                    html += '\n';
+                });
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (e) {
+                resultDiv.innerHTML = `❌ Ошибка: ${e.message}`;
+                console.error(e);
+            }
+        }
+        
+        async function testLogin() {
+            const username = document.getElementById('testUsername').value.trim();
+            const password = document.getElementById('testPassword').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = 'Проверка...';
+            
+            try {
+                // 1. Сначала загружаем пользователей
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Лист1!A:H?key=${API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `❌ Ошибка API: ${JSON.stringify(data.error, null, 2)}`;
+                    return;
+                }
+                
+                if (!data.values || data.values.length < 2) {
+                    resultDiv.innerHTML = '❌ Таблица не содержит данных. Добавьте пользователей в Google Sheets!';
+                    return;
+                }
+                
+                const headers = data.values[0];
+                const rows = data.values.slice(1);
+                
+                // Ищем пользователя
+                const usernameIndex = headers.indexOf('username');
+                const passwordIndex = headers.indexOf('password');
+                
+                if (usernameIndex === -1 || passwordIndex === -1) {
+                    resultDiv.innerHTML = `❌ В таблице нет колонок 'username' или 'password'.\n`;
+                    resultDiv.innerHTML += `Найденные колонки: ${headers.join(', ')}`;
+                    return;
+                }
+                
+                const passwordHash = hashPassword(password);
+                let foundUser = null;
+                
+                for (const row of rows) {
+                    if (row[usernameIndex] === username) {
+                        foundUser = row;
+                        break;
+                    }
+                }
+                
+                if (!foundUser) {
+                    resultDiv.innerHTML = `❌ Пользователь "${username}" не найден в таблице.\n\n`;
+                    resultDiv.innerHTML += `Список пользователей в таблице:\n`;
+                    rows.forEach(row => {
+                        resultDiv.innerHTML += `  - ${row[usernameIndex] || '(пусто)'}\n`;
+                    });
+                    return;
+                }
+                
+                const storedHash = foundUser[passwordIndex];
+                const inputHash = passwordHash;
+                
+                resultDiv.innerHTML = `📊 Данные:\n`;
+                resultDiv.innerHTML += `Найден пользователь: ${foundUser[usernameIndex]}\n`;
+                resultDiv.innerHTML += `Хэш в таблице: ${storedHash}\n`;
+                resultDiv.innerHTML += `Хэш введённого пароля: ${inputHash}\n`;
+                resultDiv.innerHTML += `Совпадают: ${storedHash === inputHash ? '✅ ДА' : '❌ НЕТ'}\n\n`;
+                
+                if (storedHash === inputHash) {
+                    resultDiv.innerHTML += `✅ Вход выполнен успешно!\n`;
+                    resultDiv.innerHTML += `Роль: ${foundUser[headers.indexOf('role')] || 'user'}\n`;
+                    resultDiv.innerHTML += `Cookie: ${foundUser[headers.indexOf('cookie')] || 'нет'}`;
+                    
+                    // Сохраняем пользователя
+                    const userData = {
+                        username: foundUser[usernameIndex],
+                        role: foundUser[headers.indexOf('role')] || 'user',
+                        cookie: foundUser[headers.indexOf('cookie')] || ''
+                    };
+                    localStorage.setItem('robloex_user', JSON.stringify(userData));
+                } else {
+                    resultDiv.innerHTML += `❌ Неверный пароль!\n`;
+                    resultDiv.innerHTML += `\n💡 Подсказка: Пароль "admin123" должен давать хэш: 8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918`;
+                }
+                
+            } catch (e) {
+                resultDiv.innerHTML = `❌ Ошибка: ${e.message}`;
+                console.error(e);
+            }
+        }
+        
+        // Автоматически загружаем пользователей при загрузке страницы
+        loadUsers();
+    </script>
+</body>
+</html>
